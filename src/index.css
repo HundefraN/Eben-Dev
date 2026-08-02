@@ -1,151 +1,538 @@
 @import "tailwindcss";
 
-@theme {
---color-brand-navy: #0b2545;
---color-brand-navy-dark: #071930;
---color-brand-navy-light: #133863;
---color-brand-gold: #c59b27;
---color-brand-gold-light: #d8af38;
---color-brand-gold-dark: #9e7a1b;
+/* Dark mode is driven by a data attribute so it can be toggled at runtime. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ==========================================================================
+   Palette
+   Sampled from the mascot artwork: indigo denim outfit, gold sneakers,
+   warm copper hair. Every accent in the UI traces back to her.
+   ========================================================================== */
+:root {
+  --ink-950: #04091a;
+  --ink-900: #061229;
+  --ink-800: #0b2545;
+  --ink-700: #143560;
+  --ink-600: #1e4a80;
+  --ink-500: #2c649f;
+
+  --gold-700: #8a6a12;
+  --gold-600: #a9821b;
+  --gold-500: #c59b27;
+  --gold-400: #ddb64a;
+  --gold-300: #efd287;
+  --gold-200: #f7e7bd;
+
+  --copper-600: #a85a2a;
+  --copper-500: #c0703a;
+  --copper-400: #d99366;
+
+  --paper-000: #ffffff;
+  --paper-050: #fbf9f6;
+  --paper-100: #f5f2ec;
+  --paper-200: #ebe6dc;
+  --paper-300: #ddd6c8;
+
+  /* ---- Semantic tokens (light) ---- */
+  --bg: var(--paper-050);
+  --bg-elevated: rgba(255, 255, 255, 0.72);
+  /* Opaque twin of --bg-elevated, for surfaces that can't afford a blur. */
+  --bg-solid: #ffffff;
+  /* Primary action fill. Deep ink reads as the strongest thing on paper; on a
+     dark ground it disappears, so the dark theme hands the job to the gold. */
+  --action-bg: var(--ink-800);
+  --action-fg: var(--paper-050);
+  /* Watermark ink for the oversized wordmark. Tuned per theme by eye: the same
+     percentage of --fg reads far heavier on a dark ground. */
+  --ghost: color-mix(in srgb, var(--ink-800) 13%, transparent);
+  --bg-sunken: var(--paper-100);
+
+  --fg: var(--ink-800);
+  --fg-muted: #55688a;
+  --fg-subtle: #7d8ca6;
+  --fg-inverted: var(--paper-050);
+
+  --accent: var(--gold-500);
+  --accent-strong: var(--gold-600);
+  --accent-soft: rgba(197, 155, 39, 0.14);
+  --accent-fg: var(--ink-900);
+
+  --hairline: rgba(11, 37, 69, 0.09);
+  --hairline-strong: rgba(11, 37, 69, 0.16);
+  --highlight: rgba(255, 255, 255, 0.75);
+
+  --field: rgba(255, 255, 255, 0.65);
+  --field-border: rgba(11, 37, 69, 0.12);
+
+  --shadow-color: 214 60% 14%;
+
+  /* ---- Elevation: layered, tinted, soft ---- */
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05),
+    0 2px 6px -1px hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 1px 2px hsl(var(--shadow-color) / 0.04),
+    0 6px 14px -4px hsl(var(--shadow-color) / 0.08),
+    0 12px 28px -8px hsl(var(--shadow-color) / 0.07);
+  --shadow-lg: 0 1px 2px hsl(var(--shadow-color) / 0.04),
+    0 10px 22px -6px hsl(var(--shadow-color) / 0.09),
+    0 26px 56px -16px hsl(var(--shadow-color) / 0.12);
+  --shadow-xl: 0 2px 4px hsl(var(--shadow-color) / 0.04),
+    0 18px 36px -10px hsl(var(--shadow-color) / 0.1),
+    0 48px 88px -24px hsl(var(--shadow-color) / 0.18);
+  --shadow-ring-accent: 0 0 0 1px rgba(197, 155, 39, 0.28),
+    0 8px 30px -8px rgba(197, 155, 39, 0.36);
+
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  --radius-2xl: 40px;
+
+  --blur-glass: 20px;
+  --grain-opacity: 0.035;
+
+  /* Live viewport height, kept accurate on mobile by useViewport() */
+  --vh: 100vh;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-* {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+[data-theme="dark"] {
+  --bg: #060d1c;
+  --bg-elevated: rgba(19, 32, 56, 0.62);
+  --bg-solid: #14213a;
+  --action-bg: var(--gold-300);
+  --action-fg: var(--ink-950);
+  --ghost: rgba(226, 236, 252, 0.055);
+  --bg-sunken: #040915;
+
+  --fg: #eef3fb;
+  --fg-muted: #9fb1cd;
+  --fg-subtle: #6f83a3;
+  --fg-inverted: var(--ink-900);
+
+  --accent: var(--gold-400);
+  --accent-strong: var(--gold-300);
+  --accent-soft: rgba(221, 182, 74, 0.16);
+  --accent-fg: var(--ink-950);
+
+  --hairline: rgba(198, 218, 255, 0.12);
+  --hairline-strong: rgba(198, 218, 255, 0.22);
+  --highlight: rgba(255, 255, 255, 0.08);
+
+  --field: rgba(255, 255, 255, 0.05);
+  --field-border: rgba(198, 218, 255, 0.16);
+
+  --shadow-color: 220 70% 3%;
+  --shadow-md: 0 1px 2px hsl(var(--shadow-color) / 0.4),
+    0 6px 14px -4px hsl(var(--shadow-color) / 0.5),
+    0 12px 28px -8px hsl(var(--shadow-color) / 0.45);
+  --shadow-lg: 0 1px 2px hsl(var(--shadow-color) / 0.4),
+    0 10px 22px -6px hsl(var(--shadow-color) / 0.55),
+    0 26px 56px -16px hsl(var(--shadow-color) / 0.6);
+  --shadow-xl: 0 2px 4px hsl(var(--shadow-color) / 0.4),
+    0 18px 36px -10px hsl(var(--shadow-color) / 0.6),
+    0 48px 88px -24px hsl(var(--shadow-color) / 0.7);
+
+  --grain-opacity: 0.05;
 }
 
-/* Custom scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(197, 155, 39, 0.25);
-  border-radius: 100px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(197, 155, 39, 0.5);
+/* Expose the semantic tokens to Tailwind's utility generator. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elevated: var(--bg-elevated);
+  --color-sunken: var(--bg-sunken);
+
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+  --color-inverted: var(--fg-inverted);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+
+  --color-gold-700: var(--gold-700);
+  --color-gold-600: var(--gold-600);
+  --color-gold-500: var(--gold-500);
+  --color-gold-400: var(--gold-400);
+  --color-gold-300: var(--gold-300);
+  --color-gold-200: var(--gold-200);
+
+  --color-copper-500: var(--copper-500);
+  --color-copper-400: var(--copper-400);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Prevent overscroll bouncing on the body */
-html, body {
-  overscroll-behavior: none;
-  overflow: hidden;
+/* ==========================================================================
+   Base
+
+   Everything here lives in Tailwind's `base` layer on purpose. Unlayered CSS
+   outranks every layered rule, so a bare `button { padding: 0 }` would quietly
+   beat `px-4` on every button in the app.
+   ========================================================================== */
+@layer base {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
   height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg);
 }
 
-/* Smooth page stage transitions */
-@keyframes fadeSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--fg);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* Optical sizing + tighter tracking for display copy. */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01", "cv05";
+  letter-spacing: -0.02em;
 }
 
-.animate-shimmer {
-  background-size: 200% 100%;
-  animation: shimmer 3s linear infinite;
+::selection {
+  background: var(--accent-soft);
+  color: var(--fg);
 }
 
-/* Glass card effect */
-.glass-card {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(11, 37, 69, 0.08);
+/* Visible only for keyboard users — never on mouse click. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
-/* Premium gradient border effect */
-.gradient-border {
+button,
+a,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+}
+
+/* ==========================================================================
+   Surfaces
+   ========================================================================== */
+@layer components {
+.surface {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(160%);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--highlight);
+}
+
+.surface-raised {
+  background: var(--bg-elevated);
+  backdrop-filter: blur(var(--blur-glass)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(170%);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--highlight);
+}
+
+.surface-solid {
+  background: color-mix(in srgb, var(--bg) 86%, white);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--highlight);
+}
+
+[data-theme="dark"] .surface-solid {
+  background: color-mix(in srgb, var(--bg) 88%, white 6%);
+}
+
+/* Gradient hairline that catches the light along the top edge. */
+.edge-light {
   position: relative;
 }
-.gradient-border::before {
-  content: '';
+.edge-light::before {
+  content: "";
   position: absolute;
   inset: 0;
-  padding: 1.5px;
   border-radius: inherit;
-  background: linear-gradient(135deg, #c59b27 0%, #0b2545 50%, #c59b27 100%);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 55%, transparent),
+    transparent 38%,
+    transparent 62%,
+    color-mix(in srgb, var(--accent) 22%, transparent)
+  );
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
+  -webkit-mask-composite: xor;
   pointer-events: none;
 }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.03);
-  }
+/* ==========================================================================
+   Type helpers
+   ========================================================================== */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
 }
 
-.animate-pulse-glow {
-  animation: pulseGlow 4s ease-in-out infinite;
+.text-gradient-ink {
+  background: linear-gradient(
+    172deg,
+    var(--ink-500) 0%,
+    var(--ink-800) 46%,
+    var(--ink-900) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
-@keyframes floatGentle {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(0.5deg);
-  }
+[data-theme="dark"] .text-gradient-ink {
+  background: linear-gradient(
+    168deg,
+    #ffffff 0%,
+    #cfe0f7 44%,
+    var(--gold-400) 128%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.animate-float-gentle {
-  animation: floatGentle 5s ease-in-out infinite;
-}
-
-/* Manga / Anime Cartoon Utilities */
-.shadow-manga {
-  box-shadow: 5px 5px 0px #0b2545;
-}
-
-.shadow-manga-lg {
-  box-shadow: 7px 7px 0px #0b2545;
-}
-
-.shadow-manga-gold {
-  box-shadow: 5px 5px 0px #c59b27;
-}
-
-.shadow-manga-sm {
-  box-shadow: 3px 3px 0px #0b2545;
-}
-
-.manga-dots {
-  background-image: radial-gradient(#0b2545 15%, transparent 16%);
-  background-size: 10px 10px;
-}
-
-.manga-dots-gold {
-  background-image: radial-gradient(#c59b27 18%, transparent 19%);
-  background-size: 12px 12px;
-}
-
-.manga-speech-bubble::after {
-  content: '';
+/* ==========================================================================
+   Texture
+   ========================================================================== */
+.grain::after {
+  content: "";
   position: absolute;
-  bottom: -8px;
-  left: 24px;
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid #0b2545;
+  inset: -50%;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* ==========================================================================
+   Scrollbars
+   ========================================================================== */
+.scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+  overscroll-behavior: contain;
+}
+.scroll-area::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-area::-webkit-scrollbar-thumb {
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.scroll-area::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+/* Mask the top/bottom edges of scrollable regions so content fades out. */
+.scroll-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 22px,
+    #000 calc(100% - 22px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 22px,
+    #000 calc(100% - 22px),
+    transparent 100%
+  );
+}
+}
+
+/* ==========================================================================
+   Keyframes — deliberately few. Most motion is spring-driven in JS.
+   ========================================================================== */
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(320%) skewX(-12deg);
+  }
+}
+
+@keyframes threadFlow {
+  to {
+    stroke-dashoffset: -1000;
+  }
+}
+
+@keyframes caretBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-caret {
+  animation: caretBlink 1.05s steps(1) infinite;
+}
+
+/* ==========================================================================
+   Video loader — concentric gold rings with staggered spin.
+   ========================================================================== */
+@keyframes proof-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes proof-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50%      { transform: scale(1.35); opacity: 1; }
+}
+@keyframes proof-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.proof-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 9, 26, 0.82);
+  animation: proof-fade-in 0.3s ease-out;
+  pointer-events: none;
+}
+
+.proof-loader__rings {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.proof-loader__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: proof-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.proof-loader__ring:nth-child(1) {
+  border-top-color: var(--gold-300);
+  animation-duration: 1s;
+}
+.proof-loader__ring:nth-child(2) {
+  inset: 6px;
+  border-right-color: var(--gold-400);
+  animation-duration: 1.5s;
+  animation-direction: reverse;
+}
+.proof-loader__ring:nth-child(3) {
+  inset: 12px;
+  border-bottom-color: var(--gold-500);
+  animation-duration: 2s;
+}
+
+.proof-loader__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--gold-300);
+  animation: proof-pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 14px 4px rgba(239, 210, 135, 0.35);
+}
+
+.proof-loader__label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(239, 210, 135, 0.7);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Reduced motion — strip loops, keep state changes legible.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

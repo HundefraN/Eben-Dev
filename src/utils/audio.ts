@@ -1,90 +1,106 @@
+/**
+ * Small Web Audio kit. Everything is filtered and quiet — the goal is a soft
+ * tactile confirmation, not an arcade cabinet. Muted by default; the studio
+ * provider opts in only after the user flips the sound switch.
+ */
 class SoundEffectsEngine {
   private ctx: AudioContext | null = null;
+  private master: GainNode | null = null;
+  private lastHover = 0;
 
-  private init() {
-    if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtx) {
-        this.ctx = new AudioCtx();
-      }
+  private init(): AudioContext | null {
+    if (typeof window === 'undefined') return null;
+    if (!this.ctx) {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+
+      // Gentle low-pass keeps every cue warm instead of piercing.
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 2600;
+      filter.Q.value = 0.6;
+
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.5;
+
+      this.master.connect(filter);
+      filter.connect(this.ctx.destination);
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    return this.ctx;
+  }
+
+  private tone(
+    ctx: AudioContext,
+    {
+      freq,
+      to,
+      type = 'sine',
+      at = 0,
+      dur = 0.12,
+      peak = 0.02,
+    }: { freq: number; to?: number; type?: OscillatorType; at?: number; dur?: number; peak?: number },
+  ) {
+    const t0 = ctx.currentTime + at;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (to) osc.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+
+    // Short attack, long-ish exponential tail reads as "soft" rather than "blip".
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+    osc.connect(gain);
+    gain.connect(this.master!);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  /** Very quiet tick. Rate-limited so sweeping across a grid doesn't machine-gun. */
+  playHoverSound() {
+    const now = performance.now();
+    if (now - this.lastHover < 90) return;
+    this.lastHover = now;
+    try {
+      const ctx = this.init();
+      if (!ctx) return;
+      this.tone(ctx, { freq: 880, to: 1180, dur: 0.07, peak: 0.008 });
+    } catch {
+      /* audio is decorative — never let it break the page */
     }
   }
 
-  public playHoverSound() {
+  /** Warm major-third confirmation. */
+  playClickChime() {
     try {
-      this.init();
-      if (!this.ctx) return;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.08);
-
-      gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.08);
+      const ctx = this.init();
+      if (!ctx) return;
+      [
+        { freq: 587.33, at: 0 },
+        { freq: 739.99, at: 0.045 },
+        { freq: 987.77, at: 0.09 },
+      ].forEach(({ freq, at }) => this.tone(ctx, { freq, at, dur: 0.4, peak: 0.016 }));
     } catch {
+      /* ignore */
     }
   }
 
-  public playClickChime() {
+  /** Airy low sweep for stage transitions. */
+  playParallaxSwoosh() {
     try {
-      this.init();
-      if (!this.ctx) return;
-
-      const freqs = [523.25, 659.25, 783.99];
-      freqs.forEach((freq, idx) => {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.04);
-
-        gain.gain.setValueAtTime(0.03, this.ctx.currentTime + idx * 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + idx * 0.04 + 0.35);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(this.ctx.currentTime + idx * 0.04);
-        osc.stop(this.ctx.currentTime + idx * 0.04 + 0.35);
-      });
+      const ctx = this.init();
+      if (!ctx) return;
+      this.tone(ctx, { freq: 180, to: 420, type: 'triangle', dur: 0.26, peak: 0.014 });
+      this.tone(ctx, { freq: 90, to: 210, type: 'sine', dur: 0.3, peak: 0.01 });
     } catch {
-    }
-  }
-
-  public playParallaxSwoosh() {
-    try {
-      this.init();
-      if (!this.ctx) return;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(320, this.ctx.currentTime + 0.15);
-
-      gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.15);
-    } catch {
+      /* ignore */
     }
   }
 }

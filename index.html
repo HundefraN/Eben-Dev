@@ -1,17 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" type="image/png" href="/src/assets/images/logo.png" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#fbf9f6" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#060d1c" media="(prefers-color-scheme: dark)" />
+
+  <title>Eben Dev Solutions — Software Studio</title>
   <meta name="description"
-    content="Eben Dev Solutions — Next-gen software engineering lab specializing in full-stack web systems, AI integrations, 3D interactive experiences, and cross-platform mobile apps." />
-  <title>Eben Dev Solutions — Next-Gen Software Lab</title>
+    content="Eben Dev Solutions is a software studio building full-stack web systems, AI-powered products, interactive 3D experiences, and cross-platform mobile apps." />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Eben Dev Solutions — Software Studio" />
+  <meta property="og:description"
+    content="Full-stack web systems, AI-powered products, interactive 3D, and cross-platform mobile — engineered end to end." />
+
+  <link rel="preconnect" href="https://res.cloudinary.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
     rel="stylesheet" />
+
+  <script>
+    // Resolve the theme before first paint so there is no flash of the wrong palette.
+    (function () {
+      try {
+        var stored = localStorage.getItem('eben-theme');
+        var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) { }
+    })();
+  </script>
 </head>
 
 <body>
