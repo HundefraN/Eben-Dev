@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+--color-brand-navy: #0b2545;
+--color-brand-navy-dark: #071930;
+--color-brand-navy-light: #133863;
+--color-brand-gold: #c59b27;
+--color-brand-gold-light: #d8af38;
+--color-brand-gold-dark: #9e7a1b;
+}
+
+* {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(197, 155, 39, 0.25);
+  border-radius: 100px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 155, 39, 0.5);
+}
+
+/* Prevent overscroll bouncing on the body */
+html, body {
+  overscroll-behavior: none;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Smooth page stage transitions */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(11, 37, 69, 0.08);
+}
+
+/* Premium gradient border effect */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #c59b27 0%, #0b2545 50%, #c59b27 100%);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.03);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+.animate-float-gentle {
+  animation: floatGentle 5s ease-in-out infinite;
+}
+
+/* Manga / Anime Cartoon Utilities */
+.shadow-manga {
+  box-shadow: 5px 5px 0px #0b2545;
+}
+
+.shadow-manga-lg {
+  box-shadow: 7px 7px 0px #0b2545;
+}
+
+.shadow-manga-gold {
+  box-shadow: 5px 5px 0px #c59b27;
+}
+
+.shadow-manga-sm {
+  box-shadow: 3px 3px 0px #0b2545;
+}
+
+.manga-dots {
+  background-image: radial-gradient(#0b2545 15%, transparent 16%);
+  background-size: 10px 10px;
+}
+
+.manga-dots-gold {
+  background-image: radial-gradient(#c59b27 18%, transparent 19%);
+  background-size: 12px 12px;
+}
+
+.manga-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 24px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #0b2545;
+}

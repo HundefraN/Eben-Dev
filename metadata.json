@@ -1,0 +1,6 @@
+{
+  "name": "Eben Dev Solutions",
+  "description": "Interactive animated parallax landing page featuring 3D text behind character with cursor movement dynamics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
