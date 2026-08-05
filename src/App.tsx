@@ -14,6 +14,8 @@ import { ContactPanel } from './components/ContactPanel';
 import { ServicesSheet } from './components/ServicesSheet';
 import { LoadingCounter } from './components/LoadingCounter';
 import { COMPANY_INFO, IDLE_LINES, STAGE_META } from './data/companyData';
+import { trackEvent, initSessionDurationTracking } from './utils/analytics';
+import { AdminAnalytics } from './pages/AdminAnalytics';
 
 /* ------------------------------------------------------------------ */
 
@@ -30,6 +32,18 @@ const Studio: React.FC = () => {
     const t = setTimeout(() => bus.say(meta.greeting, { priority: 3, ttl: 5200 }), delay);
     return () => clearTimeout(t);
   }, [stage, bus]);
+
+  /* Track stage duration. */
+  useEffect(() => {
+    const startTime = Date.now();
+    const currentStage = stage;
+    return () => {
+      const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+      if (durationSeconds > 0) {
+        trackEvent('stage_duration', { stage: currentStage, durationSeconds });
+      }
+    };
+  }, [stage]);
 
   /* After a stretch of inactivity on the home stage she offers a nudge. */
   useEffect(() => {
@@ -97,10 +111,27 @@ const Studio: React.FC = () => {
 /* ------------------------------------------------------------------ */
 
 export default function App() {
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  if (currentPath === '/admin' || currentPath.startsWith('/admin')) {
+    return <AdminAnalytics />;
+  }
+
   /* The stage is held back until the counter has the artwork warm, so its
      entrance plays into the opening curtain instead of behind it. */
   const [revealed, setRevealed] = useState(false);
   const reveal = useCallback(() => setRevealed(true), []);
+
+  useEffect(() => {
+    initSessionDurationTracking();
+    trackEvent('visit', { source: 'App load' });
+  }, []);
 
   return (
     <StudioProvider>

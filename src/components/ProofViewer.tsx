@@ -4,6 +4,7 @@ import { ArrowUpRight, Link2Off, X } from 'lucide-react';
 import { useStudio } from '../core/studio';
 import type { ProjectHighlight } from '../core/types';
 import { hostLabel, resolveMedia } from '../utils/media';
+import { trackEvent } from '../utils/analytics';
 
 /**
  * The unlit film frame behind every piece of proof: deep ink, one gold bloom,
@@ -91,6 +92,16 @@ export const ProofViewer: React.FC<ProofViewerProps> = ({ project, index, onClos
     if (!project) return;
     bus.say(project.quip, { priority: 4, ttl: 4600 });
   }, [project, bus]);
+
+  useEffect(() => {
+    if (open && project && project.proof?.kind === 'video') {
+      trackEvent('video_play', {
+        projectId: project.id,
+        title: project.title,
+        proofLabel: project.proof.label,
+      });
+    }
+  }, [open, project]);
 
   useEffect(() => {
     if (!open) return;

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useTransform } from 'motion/react';
 import { useCompanionLink, useStudio } from '../core/studio';
 
@@ -47,6 +47,15 @@ export const CompanionPip: React.FC = () => {
 
 /* ------------------------------------------------------------------ */
 
+/** Pixels per second the auto-scroll crawls at. */
+const AUTO_SCROLL_SPEED = 30;
+/** How long (ms) to pause at the bottom before looping back to top. */
+const BOTTOM_PAUSE_MS = 1200;
+/** How long (ms) the smooth "rewind to top" animation takes. */
+const REWIND_MS = 800;
+/** Delay (ms) after the panel appears before auto-scroll starts. */
+const START_DELAY_MS = 1400;
+
 interface StagePanelProps {
   index: number;
   side: 'left' | 'right';
@@ -56,6 +65,8 @@ interface StagePanelProps {
   children: React.ReactNode;
   /** Widened for the contact form, which needs two columns. */
   wide?: boolean;
+  /** Enable auto-scroll with pause-on-hover for this panel. */
+  showScrollControls?: boolean;
 }
 
 export const StagePanel: React.FC<StagePanelProps> = ({
@@ -66,13 +77,18 @@ export const StagePanel: React.FC<StagePanelProps> = ({
   intro,
   children,
   wide = false,
+  showScrollControls = false,
 }) => {
   const { stage, pointer, viewport, reduceMotion } = useStudio();
   const active = stage === index;
   const [mounted, setMounted] = useState(active);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  const { ref: linkRef, linkProps } = useCompanionLink({ weight: 0.5, alwaysOn: active });
+  // Auto-scroll machinery
+  const rafRef = useRef(0);
+  const pausedRef = useRef(false);
+  const rewindingRef = useRef(false);
+  const lastTimeRef = useRef(0);
 
   // Keep the panel mounted through its exit animation.
   useEffect(() => {
@@ -84,6 +100,121 @@ export const StagePanel: React.FC<StagePanelProps> = ({
     const t = setTimeout(() => setMounted(false), 480);
     return () => clearTimeout(t);
   }, [active]);
+
+  /* ---- Auto-scroll effect ---- */
+  useEffect(() => {
+    if (!showScrollControls || !mounted || !active) return;
+
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    let cancelled = false;
+    let bottomPauseTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const tick = (now: number) => {
+      if (cancelled) return;
+
+      if (pausedRef.current || rewindingRef.current) {
+        // Keep the loop alive but don't scroll
+        lastTimeRef.current = now;
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      if (lastTimeRef.current === 0) {
+        lastTimeRef.current = now;
+      }
+
+      const dt = (now - lastTimeRef.current) / 1000; // seconds
+      lastTimeRef.current = now;
+
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll <= 0) {
+        // Nothing to scroll
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      const newTop = el.scrollTop + AUTO_SCROLL_SPEED * dt;
+
+      if (newTop >= maxScroll) {
+        // Reached the bottom — sit there briefly, then rewind
+        el.scrollTop = maxScroll;
+
+        if (!bottomPauseTimer) {
+          bottomPauseTimer = setTimeout(() => {
+            if (cancelled) return;
+            bottomPauseTimer = null;
+            rewindToTop(el, () => {
+              if (!cancelled) {
+                lastTimeRef.current = 0; // reset dt so no big jump
+                rafRef.current = requestAnimationFrame(tick);
+              }
+            });
+          }, BOTTOM_PAUSE_MS);
+        }
+        return; // stop the raf loop; rewindToTop will restart it
+      }
+
+      el.scrollTop = newTop;
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    /** Smoothly scroll back to 0, then call `onDone`. */
+    const rewindToTop = (scrollEl: HTMLElement, onDone: () => void) => {
+      rewindingRef.current = true;
+      const startY = scrollEl.scrollTop;
+      const startTime = performance.now();
+
+      const step = (now: number) => {
+        if (cancelled) return;
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / REWIND_MS, 1);
+        // Ease-in-out cubic
+        const ease =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        scrollEl.scrollTop = startY * (1 - ease);
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          scrollEl.scrollTop = 0;
+          rewindingRef.current = false;
+          onDone();
+        }
+      };
+      requestAnimationFrame(step);
+    };
+
+    // Small delay before the auto-scroll kicks in so the panel can finish
+    // its entrance animation and the user sees the top content first.
+    const startTimer = setTimeout(() => {
+      if (!cancelled) {
+        lastTimeRef.current = 0;
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }, START_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafRef.current);
+      clearTimeout(startTimer);
+      if (bottomPauseTimer) clearTimeout(bottomPauseTimer);
+    };
+  }, [showScrollControls, mounted, active]);
+
+  /* ---- Pause on hover / touch ---- */
+  const handlePointerEnter = useCallback(() => {
+    pausedRef.current = true;
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    pausedRef.current = false;
+    lastTimeRef.current = 0; // reset so we don't get a big dt jump
+  }, []);
+
+  const { ref: linkRef, linkProps } = useCompanionLink({ weight: 0.5, alwaysOn: active });
 
   const dir = side === 'right' ? 1 : -1;
   const tiltX = useTransform(pointer.yr, [-1, 1], reduceMotion ? [0, 0] : [3.5, -3.5]);
@@ -117,11 +248,23 @@ export const StagePanel: React.FC<StagePanelProps> = ({
           ? 'md:w-[min(64vw,38rem)] lg:w-[min(46vw,42rem)]'
           : 'md:w-[min(58vw,32rem)] lg:w-[min(40vw,34rem)]',
       ].join(' ')}
+      onMouseEnter={showScrollControls ? handlePointerEnter : undefined}
+      onMouseLeave={showScrollControls ? handlePointerLeave : undefined}
+      onPointerEnter={showScrollControls ? handlePointerEnter : undefined}
+      onPointerLeave={showScrollControls ? handlePointerLeave : undefined}
+      onPointerOver={showScrollControls ? handlePointerEnter : undefined}
+      onTouchStart={showScrollControls ? handlePointerEnter : undefined}
+      onTouchEnd={showScrollControls ? handlePointerLeave : undefined}
       style={{ pointerEvents: active ? 'auto' : 'none' }}
     >
       <motion.div
         ref={linkRef}
         {...linkProps}
+        onMouseEnter={showScrollControls ? handlePointerEnter : undefined}
+        onMouseLeave={showScrollControls ? handlePointerLeave : undefined}
+        onPointerEnter={showScrollControls ? handlePointerEnter : undefined}
+        onPointerLeave={showScrollControls ? handlePointerLeave : undefined}
+        onPointerOver={showScrollControls ? handlePointerEnter : undefined}
         className="surface-raised edge-light relative flex max-h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)]"
         style={{
           rotateX: viewport.isMobile ? 0 : tiltX,
@@ -148,13 +291,23 @@ export const StagePanel: React.FC<StagePanelProps> = ({
 
         <span className="mx-5 block h-px shrink-0 sm:mx-6" style={{ background: 'var(--hairline)' }} />
 
-        {/* Body */}
+        {/* Body — pause auto-scroll while the user hovers / touches here */}
         <div
           ref={scrollerRef}
           data-scroller=""
+          onMouseEnter={showScrollControls ? handlePointerEnter : undefined}
+          onMouseLeave={showScrollControls ? handlePointerLeave : undefined}
+          onPointerEnter={showScrollControls ? handlePointerEnter : undefined}
+          onPointerLeave={showScrollControls ? handlePointerLeave : undefined}
+          onPointerOver={showScrollControls ? handlePointerEnter : undefined}
+          onTouchStart={showScrollControls ? handlePointerEnter : undefined}
+          onTouchEnd={showScrollControls ? handlePointerLeave : undefined}
           // @container: the contents lay themselves out against the panel's
           // width rather than the viewport's, which is what actually matters here.
-          className="scroll-area scroll-fade @container min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 sm:px-6 sm:py-5"
+          className={[
+            'scroll-area @container min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4 sm:px-6 sm:py-5',
+            showScrollControls ? 'scroll-always-visible pb-6 sm:pb-8' : 'scroll-fade pb-16 sm:pb-20',
+          ].join(' ')}
         >
           {children}
         </div>

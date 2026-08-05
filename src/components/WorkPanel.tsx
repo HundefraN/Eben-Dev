@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowUpRight, Maximize2, Play } from 'lucide-react';
 import { useCompanionLink, useStudio } from '../core/studio';
@@ -49,9 +49,8 @@ const StatusPill: React.FC<{ status: ProjectHighlight['status'] }> = ({ status }
 /* ------------------------------------------------------------------ */
 
 /**
- * The evidence, sat right in the card. A still frame where one can be derived
- * (YouTube hands us a thumbnail; a screenshot is its own poster) and the
- * designed plate everywhere else — either way it reads as a paused player.
+ * The evidence, sat right in the card. Auto-plays a muted video thumbnail when available,
+ * falling back to derived/custom poster stills or designed plates.
  */
 const ProofThumb: React.FC<{ project: ProjectHighlight; index: number; onOpen: () => void }> = ({
   project,
@@ -68,6 +67,13 @@ const ProofThumb: React.FC<{ project: ProjectHighlight; index: number; onOpen: (
 
   const Glyph = proof.kind === 'video' ? Play : Maximize2;
 
+  const handleVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    if (el) {
+      el.muted = true;
+      el.play().catch(() => {});
+    }
+  }, []);
+
   return (
     <motion.button
       type="button"
@@ -79,7 +85,29 @@ const ProofThumb: React.FC<{ project: ProjectHighlight; index: number; onOpen: (
       className="group/proof relative mt-3.5 block w-full overflow-hidden rounded-[var(--radius-md)]"
       style={{ aspectRatio: '2.2 / 1', border: '1px solid var(--hairline)' }}
     >
-      {poster ? (
+      {media.mode === 'video' ? (
+        <>
+          {poster && (
+            <img
+              src={poster}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full scale-125 object-cover opacity-60 blur-lg"
+            />
+          )}
+          <video
+            ref={handleVideoRef}
+            src={media.src}
+            poster={poster}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 h-full w-full object-contain"
+          />
+        </>
+      ) : poster ? (
         <>
           {/* Blurred cover behind, contained image in front: portrait phone
               captures and wide desktop stills both sit in the frame properly. */}
@@ -279,6 +307,7 @@ export const WorkPanel: React.FC = () => {
         eyebrow="Selected work"
         title="Four builds, with the proof attached"
         intro="Three come with a recorded walkthrough. Kena is live at kenafiber.com — go click around it yourself."
+        showScrollControls
       >
         {/* Studio numbers */}
         <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-md)] @md:grid-cols-4"

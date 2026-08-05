@@ -204,39 +204,6 @@ export const PROOF_POSTERS = {
 /** Years are best guesses — correct them to the real delivery dates. */
 export const PROJECT_HIGHLIGHTS: ProjectHighlight[] = [
   {
-    id: 'abosto',
-    title: 'Abosto Dental Clinic',
-    discipline: 'Clinic database',
-    role: 'Frontend + backend',
-    status: { label: 'Shipped', tone: 'shipped' },
-    description:
-      'A dental clinic database where both the frontend and backend were built by me.',
-    tags: ['Web app', 'Database', 'Full-stack'],
-    year: '2024',
-    quip: 'Both halves of that one are his. Front to back, nobody else.',
-    proof: { kind: 'video', url: PROOF_LINKS.abosto, label: 'Watch the demo', poster: PROOF_POSTERS.abosto },
-  },
-  {
-    id: 'zamar',
-    title: 'Zamar App',
-    discipline: "Musician's app",
-    role: 'Full-stack',
-    status: { label: 'In development', tone: 'building' },
-    description:
-      "A musician's app built with Flutter and Supabase. It is currently in development and not yet released.",
-    tags: ['Flutter', 'Supabase', 'Mobile'],
-    year: '2026',
-    quip: 'Still in the workshop, that one. Flutter on top, Supabase underneath.',
-    proof: {
-      kind: 'video',
-      url: PROOF_LINKS.zamar,
-      // Screen capture off a phone, so it gets a tall frame instead of bars.
-      orientation: 'portrait',
-      label: 'Watch the demo',
-      poster: PROOF_POSTERS.zamar,
-    },
-  },
-  {
     id: 'genet',
     title: 'Ethiopian Genet Church Database',
     discipline: 'Church database',
@@ -262,6 +229,39 @@ export const PROJECT_HIGHLIGHTS: ProjectHighlight[] = [
     quip: 'That one is live. Go and click around it yourself.',
     proof: { kind: 'image', url: PROOF_LINKS.kena, label: 'View the screenshot' },
     link: { label: 'www.kenafiber.com', href: 'https://www.kenafiber.com' },
+  },
+  {
+    id: 'zamar',
+    title: 'Zamar App',
+    discipline: "Musician's app",
+    role: 'Full-stack',
+    status: { label: 'In development', tone: 'building' },
+    description:
+      "A musician's app built with Flutter and Supabase. It is currently in development and not yet released.",
+    tags: ['Flutter', 'Supabase', 'Mobile'],
+    year: '2026',
+    quip: 'Still in the workshop, that one. Flutter on top, Supabase underneath.',
+    proof: {
+      kind: 'video',
+      url: PROOF_LINKS.zamar,
+      // Screen capture off a phone, so it gets a tall frame instead of bars.
+      orientation: 'portrait',
+      label: 'Watch the demo',
+      poster: PROOF_POSTERS.zamar,
+    },
+  },
+  {
+    id: 'abosto',
+    title: 'Abosto Dental Clinic',
+    discipline: 'Clinic database',
+    role: 'Frontend + backend',
+    status: { label: 'Shipped', tone: 'shipped' },
+    description:
+      'A dental clinic database where both the frontend and backend were built by me.',
+    tags: ['Web app', 'Database', 'Full-stack'],
+    year: '2024',
+    quip: 'Both halves of that one are his. Front to back, nobody else.',
+    proof: { kind: 'video', url: PROOF_LINKS.abosto, label: 'Watch the demo', poster: PROOF_POSTERS.abosto },
   },
 ];
 

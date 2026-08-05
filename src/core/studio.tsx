@@ -20,6 +20,7 @@ import type {
 } from './types';
 import { STAGES } from './types';
 import { soundFx } from '../utils/audio';
+import { trackEvent } from '../utils/analytics';
 
 /* ------------------------------------------------------------------ */
 /* Viewport                                                            */
@@ -340,6 +341,10 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const stageRef = useRef(stage);
   stageRef.current = stage;
+
+  useEffect(() => {
+    trackEvent('stage_change', { stage: STAGES[stage], index: stage });
+  }, [stage]);
 
   const bus = useMemo(() => new CompanionBus(), []);
   const links = useMemo(() => new LinkRegistry(), []);
