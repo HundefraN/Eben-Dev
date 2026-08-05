@@ -1,14 +1,94 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
-  ArrowRight, Check, CheckCircle2, Clock, Copy, Loader2, Mail, Phone, Send, ShieldCheck,
+  AlertCircle, ArrowRight, Check, CheckCircle2, Clock, Coins, Copy, Globe, Loader2, Mail, Phone, Send, ShieldCheck, RefreshCw,
 } from 'lucide-react';
 import { useCompanionLink, useStudio } from '../core/studio';
 import { FOUNDER_INFO, SERVICES_LIST } from '../data/companyData';
 import { StagePanel } from './StagePanel';
 import { soundFx } from '../utils/audio';
 
-const BUDGETS = ['Under $5k', '$5k – $15k', '$15k – $30k', '$30k+', 'Not sure yet'];
+export interface CurrencyOption {
+  code: string;
+  symbol: string;
+  name: string;
+  ranges: string[];
+}
+
+export const CURRENCY_OPTIONS: CurrencyOption[] = [
+  {
+    code: 'USD',
+    symbol: '$',
+    name: 'USD - US Dollar ($)',
+    ranges: ['Under $5,000', '$5,000 – $15,000', '$15,000 – $30,000', '$30,000+', 'Not sure yet'],
+  },
+  {
+    code: 'ETB',
+    symbol: 'Br',
+    name: 'ETB - Ethiopian Birr (Br)',
+    ranges: ['Under 250,000 ETB', '250,000 – 750,000 ETB', '750,000 – 1,500,000 ETB', '1,500,000+ ETB', 'Not sure yet'],
+  },
+  {
+    code: 'EUR',
+    symbol: '€',
+    name: 'EUR - Euro (€)',
+    ranges: ['Under €5,000', '€5,000 – €15,000', '€15,000 – €30,000', '€30,000+', 'Not sure yet'],
+  },
+  {
+    code: 'GBP',
+    symbol: '£',
+    name: 'GBP - British Pound (£)',
+    ranges: ['Under £4,000', '£4,000 – £12,000', '£12,000 – £25,000', '£25,000+', 'Not sure yet'],
+  },
+  {
+    code: 'CAD',
+    symbol: 'C$',
+    name: 'CAD - Canadian Dollar (C$)',
+    ranges: ['Under C$6,000', 'C$6,000 – C$20,000', 'C$20,000 – C$40,000', 'C$40,000+', 'Not sure yet'],
+  },
+  {
+    code: 'AUD',
+    symbol: 'A$',
+    name: 'AUD - Australian Dollar (A$)',
+    ranges: ['Under A$7,000', 'A$7,000 – A$20,000', 'A$20,000 – A$45,000', 'A$45,000+', 'Not sure yet'],
+  },
+  {
+    code: 'AED',
+    symbol: 'AED',
+    name: 'AED - UAE Dirham (AED)',
+    ranges: ['Under 20,000 AED', '20,000 – 60,000 AED', '60,000 – 120,000 AED', '120,000+ AED', 'Not sure yet'],
+  },
+  {
+    code: 'SAR',
+    symbol: 'SAR',
+    name: 'SAR - Saudi Riyal (SAR)',
+    ranges: ['Under 20,000 SAR', '20,000 – 60,000 SAR', '60,000 – 120,000 SAR', '120,000+ SAR', 'Not sure yet'],
+  },
+  {
+    code: 'INR',
+    symbol: '₹',
+    name: 'INR - Indian Rupee (₹)',
+    ranges: ['Under ₹400,000', '₹400,000 – ₹1,200,000', '₹1,200,000 – ₹2,500,000', '₹2,500,000+', 'Not sure yet'],
+  },
+  {
+    code: 'JPY',
+    symbol: '¥',
+    name: 'JPY - Japanese Yen (¥)',
+    ranges: ['Under ¥700,000', '¥700,000 – ¥2,000,000', '¥2,000,000 – ¥4,500,000', '¥4,500,000+', 'Not sure yet'],
+  },
+  {
+    code: 'CHF',
+    symbol: 'CHF',
+    name: 'CHF - Swiss Franc (CHF)',
+    ranges: ['Under CHF 5,000', 'CHF 5,000 – 15,000', 'CHF 15,000 – 30,000', 'CHF 30,000+', 'Not sure yet'],
+  },
+  {
+    code: 'CNY',
+    symbol: '¥',
+    name: 'CNY - Chinese Yuan (¥)',
+    ranges: ['Under ¥35,000', '¥35,000 – ¥100,000', '¥100,000 – ¥200,000', '¥200,000+', 'Not sure yet'],
+  },
+];
 
 /* ------------------------------------------------------------------ */
 
@@ -121,14 +201,29 @@ export const ContactPanel: React.FC = () => {
     email: '',
     phone: '',
     service: SERVICES_LIST[0].title,
-    budget: BUDGETS[1],
+    currency: 'USD',
+    budget: CURRENCY_OPTIONS[0].ranges[1],
     message: '',
+    botcheck: '',
   });
+
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = (key: keyof typeof form) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCode = e.target.value;
+    const currencyObj = CURRENCY_OPTIONS.find((c) => c.code === selectedCode) || CURRENCY_OPTIONS[0];
+    setForm((f) => ({
+      ...f,
+      currency: selectedCode,
+      budget: currencyObj.ranges[1] || currencyObj.ranges[0],
+    }));
+  };
 
   const getMailtoUrl = (data: typeof form) => {
     const subject = encodeURIComponent(`New Project Brief: ${data.service} - ${data.name}`);
@@ -137,7 +232,8 @@ export const ContactPanel: React.FC = () => {
       `Email: ${data.email}\n` +
       `Phone: ${data.phone || 'Not provided'}\n` +
       `Service Needed: ${data.service}\n` +
-      `Budget: ${data.budget}\n\n` +
+      `Currency: ${data.currency}\n` +
+      `Budget Range: ${data.budget}\n\n` +
       `Project Details:\n${data.message}`;
     return `mailto:hundefra@gmail.com?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
   };
@@ -145,44 +241,71 @@ export const ContactPanel: React.FC = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
+    setErrorMsg(null);
 
     if (sound) soundFx.playClickChime();
 
-    const mailtoUrl = getMailtoUrl(form);
+    const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
 
-    // Attempt to dispatch via FormSubmit backend API to hundefra@gmail.com
+    if (!accessKey) {
+      const missingKeyErr =
+        'Web3Forms access key is missing. Please set VITE_WEB3FORMS_ACCESS_KEY in your environment variables (.env.local).';
+      setErrorMsg(missingKeyErr);
+      setSending(false);
+      return;
+    }
+
     try {
-      await fetch('https://formsubmit.co/ajax/hundefra@gmail.com', {
+      const payload = {
+        access_key: accessKey,
+        subject: `New Project Brief: ${form.service} - ${form.name}`,
+        from_name: form.name,
+        name: form.name,
+        email: form.email,
+        phone: form.phone || 'Not provided',
+        service: form.service,
+        currency: form.currency,
+        budget: `${form.budget} (${form.currency})`,
+        message: form.message,
+        botcheck: form.botcheck,
+      };
+
+      const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone || 'Not provided',
-          service: form.service,
-          budget: form.budget,
-          message: form.message,
-          _subject: `New Project Brief: ${form.service} - ${form.name}`,
-        }),
+        body: JSON.stringify(payload),
       });
-    } catch {
-      /* fallback to mailto if offline or network error */
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSending(false);
+        setSent(true);
+        bus.react({ kind: 'cheer' });
+        bus.say(
+          `Got it, ${form.name.split(' ')[0] || 'friend'} — your brief was successfully sent via Web3Forms!`,
+          {
+            priority: 5,
+            ttl: 6000,
+          }
+        );
+      } else {
+        const errorText = data.message || 'Web3Forms submission failed. Please try again.';
+        setErrorMsg(errorText);
+        setSending(false);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Network error encountered while submitting to Web3Forms.';
+      setErrorMsg(message);
+      setSending(false);
     }
-
-    // Trigger local mail app draft opening as secondary fail-safe
-    window.location.href = mailtoUrl;
-
-    bus.react({ kind: 'cheer' });
-    bus.say(`Got it, ${form.name.split(' ')[0] || 'friend'} — that is on its way to hundefra@gmail.com.`, {
-      priority: 5,
-      ttl: 6000,
-    });
-    setSending(false);
-    setSent(true);
   };
+
+  const selectedCurrencyObj =
+    CURRENCY_OPTIONS.find((c) => c.code === form.currency) || CURRENCY_OPTIONS[0];
 
   return (
     <StagePanel
@@ -193,8 +316,7 @@ export const ContactPanel: React.FC = () => {
       title="Tell us what you're building"
       intro="Share the shape of the problem and you'll hear back from Hundefra directly, usually within two hours."
     >
-      {/* The email column is widened deliberately — a truncated address is
-          worse than an uneven grid. */}
+      {/* Direct Contact Lines */}
       <div className="grid grid-cols-1 gap-2 @md:grid-cols-[1fr_1.45fr_1fr]">
         <DirectLine
           icon={Phone}
@@ -243,36 +365,38 @@ export const ContactPanel: React.FC = () => {
               <CheckCircle2 className="h-7 w-7" style={{ color: 'var(--accent-strong)' }} />
             </motion.span>
             <h3 className="font-display text-[1.3rem] font-bold tracking-[-0.03em] text-fg">
-              Brief sent to hundefra@gmail.com
+              Brief Sent Successfully via Web3Forms!
             </h3>
-            <p className="mx-auto mt-2 max-w-sm text-[12.5px] leading-relaxed text-muted">
-              Thanks{form.name ? `, ${form.name.split(' ')[0]}` : ''}. Your brief has been dispatched to{' '}
-              <span style={{ color: 'var(--accent-strong)' }}>hundefra@gmail.com</span>. Hundefra will read this
-              personally and reply to{' '}
-              <span style={{ color: 'var(--accent-strong)' }}>{form.email || 'your inbox'}</span>{' '}
-              within two hours.
+            <p className="mx-auto mt-2 max-w-md text-[12.5px] leading-relaxed text-muted">
+              Thanks{form.name ? `, ${form.name.split(' ')[0]}` : ''}! Your brief has been submitted to Web3Forms and dispatched to Hundefra. We will review your details and reply to{' '}
+              <span style={{ color: 'var(--accent-strong)' }}>{form.email}</span> within two hours.
             </p>
-            {form.phone && (
-              <p className="mt-2 text-[11.5px] text-subtle">
-                Phone provided: <span className="font-medium text-fg">{form.phone}</span>
-              </p>
-            )}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-              <a
-                href={getMailtoUrl(form)}
-                className="rounded-full px-4 py-2 text-[12px] font-semibold text-fg"
-                style={{ background: 'var(--bg)', border: '1px solid var(--hairline)' }}
-              >
-                Open in Email app
-              </a>
+            <div className="mx-auto mt-4 max-w-sm rounded-[var(--radius-sm)] p-3 text-left text-[11.5px] space-y-1.5" style={{ background: 'var(--bg)', border: '1px solid var(--hairline)' }}>
+              <div><span className="text-subtle font-medium">Service:</span> <span className="text-fg">{form.service}</span></div>
+              <div><span className="text-subtle font-medium">Budget:</span> <span className="text-fg">{form.budget} ({form.currency})</span></div>
+              {form.phone && <div><span className="text-subtle font-medium">Phone:</span> <span className="text-fg">{form.phone}</span></div>}
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setSent(false)}
+                onClick={() => {
+                  setSent(false);
+                  setErrorMsg(null);
+                }}
+                className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold text-fg"
+                style={{ background: 'var(--bg)', border: '1px solid var(--hairline)' }}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Send another brief
+              </button>
+              <a
+                href={getMailtoUrl(form)}
                 className="rounded-full px-4 py-2 text-[12px] font-semibold text-subtle hover:text-fg"
                 style={{ background: 'var(--bg)', border: '1px solid var(--hairline)' }}
               >
-                Send another brief
-              </button>
+                Open email backup
+              </a>
             </div>
           </motion.div>
         ) : (
@@ -285,6 +409,16 @@ export const ContactPanel: React.FC = () => {
             transition={{ type: 'spring', stiffness: 280, damping: 30 }}
             className="grid grid-cols-1 gap-3.5 @md:grid-cols-2"
           >
+            {/* Honeypot for Web3Forms anti-spam */}
+            <input
+              type="checkbox"
+              name="botcheck"
+              className="hidden"
+              style={{ display: 'none' }}
+              value={form.botcheck}
+              onChange={set('botcheck')}
+            />
+
             <Field label="Your name" htmlFor="c-name">
               <input
                 id="c-name"
@@ -341,7 +475,24 @@ export const ContactPanel: React.FC = () => {
               </select>
             </Field>
 
-            <Field label="Budget range" htmlFor="c-budget" className="@md:col-span-2">
+            {/* Currency & Budget selection */}
+            <Field label="Currency" htmlFor="c-currency">
+              <select
+                id="c-currency"
+                value={form.currency}
+                onChange={handleCurrencyChange}
+                className={`${inputClass} cursor-pointer appearance-none`}
+                style={fieldStyle}
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label={`Budget range (${selectedCurrencyObj.symbol})`} htmlFor="c-budget">
               <select
                 id="c-budget"
                 value={form.budget}
@@ -349,7 +500,7 @@ export const ContactPanel: React.FC = () => {
                 className={`${inputClass} cursor-pointer appearance-none`}
                 style={fieldStyle}
               >
-                {BUDGETS.map((b) => (
+                {selectedCurrencyObj.ranges.map((b) => (
                   <option key={b} value={b}>
                     {b}
                   </option>
@@ -370,16 +521,42 @@ export const ContactPanel: React.FC = () => {
               />
             </Field>
 
+            {/* Error indicator banner if submission fails */}
+            {errorMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="@md:col-span-2 rounded-[var(--radius-sm)] p-3 text-[12px] flex items-start gap-2.5"
+                style={{
+                  background: 'color-mix(in srgb, #ef4444 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, #ef4444 30%, transparent)',
+                  color: 'var(--fg)',
+                }}
+              >
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-red-500">Submission Error</div>
+                  <div className="mt-0.5 text-muted">{errorMsg}</div>
+                  <a
+                    href={getMailtoUrl(form)}
+                    className="inline-block mt-2 font-medium text-[11.5px] text-accent underline hover:opacity-80"
+                  >
+                    Click here to send via Email client fallback &rarr;
+                  </a>
+                </div>
+              </motion.div>
+            )}
+
             <div className="@md:col-span-2">
               <motion.button
                 ref={submit.ref}
                 {...submit.linkProps}
                 type="submit"
                 disabled={sending}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.985 }}
+                whileHover={{ y: sending ? 0 : -2 }}
+                whileTap={{ scale: sending ? 1 : 0.985 }}
                 transition={{ type: 'spring', stiffness: 440, damping: 26 }}
-                className="group flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[13px] font-semibold disabled:opacity-70"
+                className="group flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[13px] font-semibold disabled:opacity-75"
                 style={{
                   background: 'var(--action-bg)',
                   color: 'var(--action-fg)',
@@ -388,12 +565,12 @@ export const ContactPanel: React.FC = () => {
               >
                 {sending ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Sending brief...
+                    <Loader2 className="h-4 w-4 animate-spin text-current" />
+                    Submitting brief via Web3Forms...
                   </>
                 ) : (
                   <>
-                    Send brief
+                    Send brief via Web3Forms
                     <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </>
                 )}
@@ -411,6 +588,8 @@ export const ContactPanel: React.FC = () => {
           { icon: Clock, label: 'Replies within 2 hours' },
           { icon: ShieldCheck, label: 'NDA on request' },
           { icon: CheckCircle2, label: 'Fixed-scope options' },
+          { icon: Coins, label: 'ETB & Global Currencies' },
+          { icon: Globe, label: 'Powered by Web3Forms' },
         ].map(({ icon: Icon, label }) => (
           <span key={label} className="flex items-center gap-1.5 text-[11px] text-subtle">
             <Icon className="h-3.5 w-3.5" style={{ color: 'var(--accent-strong)' }} />
