@@ -6,9 +6,8 @@ import { FOUNDER_INFO } from '../data/companyData';
 import { StagePanel } from './StagePanel';
 import { soundFx } from '../utils/audio';
 
-import founderPhoto from '../assets/images/CEO.jpg';
+const founderPhoto = 'https://res.cloudinary.com/dqosuzul4/image/upload/v1785918975/CEO_l5atvz.jpg';
 
-/** Thin capability meter — a quiet bar, not a game HUD. */
 const Meter: React.FC<{ label: string; caption: string; value: number; delay: number }> = ({
   label,
   caption,
@@ -108,7 +107,6 @@ export const FounderPanel: React.FC = () => {
       title={FOUNDER_INFO.name}
       intro={FOUNDER_INFO.title}
     >
-      {/* Portrait + identity */}
       <div className="flex gap-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.94 }}
@@ -159,17 +157,14 @@ export const FounderPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Bio */}
       <p className="mt-4 text-[13px] leading-relaxed text-muted">{FOUNDER_INFO.bio}</p>
 
-      {/* Capability meters */}
       <div className="mt-5 flex flex-col gap-3.5">
         {FOUNDER_INFO.disciplines.map((d, i) => (
           <Meter key={d.label} label={d.label} caption={d.caption} value={d.value} delay={0.1 + i * 0.1} />
         ))}
       </div>
 
-      {/* Stack */}
       <div className="mt-5">
         <span className="eyebrow">Working stack</span>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -191,7 +186,6 @@ export const FounderPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Direct lines */}
       <div className="mt-5 grid grid-cols-1 gap-2">
         <ContactLink
           href={`tel:${FOUNDER_INFO.phone}`}

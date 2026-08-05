@@ -15,7 +15,8 @@ import poseIdle from '../assets/images/eben_dev_character_1784789637344.png';
 import poseRight from '../assets/images/cs_pointing to the right.png';
 import poseLeft from '../assets/images/cs_pointing to the left.png';
 import posePhone from '../assets/images/cs_talking to a phone.png';
-import ceoImg from '../assets/images/CEO.jpg';
+
+const ceoImg = 'https://res.cloudinary.com/dqosuzul4/image/upload/v1785918975/CEO_l5atvz.jpg';
 
 const ASSETS = [logoImg, poseIdle, poseRight, poseLeft, posePhone, ceoImg];
 const TOTAL_STEPS = ASSETS.length + 1;
