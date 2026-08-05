@@ -363,10 +363,10 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const goTo = useCallback(
     (index: number, opts?: { silent?: boolean }) => {
       const next = Math.max(0, Math.min(STAGES.length - 1, index));
+      lastNav.current = Date.now();
       setStage((prev) => {
         if (prev === next) return prev;
         stageSource.set(next);
-        lastNav.current = Date.now();
         if (!opts?.silent && soundRef.current) soundFx.playParallaxSwoosh();
         bus.react(
           next === 1 ? { kind: 'point', side: 'right' }
@@ -399,7 +399,12 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   /* ---- navigation input: wheel, keys, swipe ---- */
   useEffect(() => {
-    const COOLDOWN = 620;
+    const COOLDOWN = 750;
+    const IDLE_TIMEOUT = 220;
+
+    let wheelIdleTimer: ReturnType<typeof setTimeout> | null = null;
+    let gestureActive = false;
+    let lastDirection = 0;
 
     /** True when the pointer sits over a scroller that can still absorb the delta. */
     const absorbedByScroller = (target: EventTarget | null, deltaY: number) => {
@@ -426,10 +431,31 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (navLocked.current) return;
       if (absorbedByScroller(e.target, e.deltaY)) return;
       e.preventDefault();
+
       const now = Date.now();
-      if (now - lastNav.current < COOLDOWN) return;
-      if (Math.abs(e.deltaY) < 12) return;
-      goTo(stageRef.current + (e.deltaY > 0 ? 1 : -1));
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const isDirectionChange = lastDirection !== 0 && direction !== lastDirection;
+
+      if (isDirectionChange && now - lastNav.current >= 350) {
+        gestureActive = false;
+      }
+
+      if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
+      wheelIdleTimer = setTimeout(() => {
+        gestureActive = false;
+        lastDirection = 0;
+      }, IDLE_TIMEOUT);
+
+      if (Math.abs(e.deltaY) < 10) return;
+
+      if (gestureActive || now - lastNav.current < COOLDOWN) {
+        return;
+      }
+
+      gestureActive = true;
+      lastDirection = direction;
+      lastNav.current = now;
+      goTo(stageRef.current + direction);
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -478,6 +504,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (Math.abs(dy) < 56 || Math.abs(dx) > Math.abs(dy)) return;
       if (absorbedByScroller(startTarget, dy)) return;
       if (Date.now() - lastNav.current < COOLDOWN) return;
+      lastNav.current = Date.now();
       goTo(stageRef.current + (dy > 0 ? 1 : -1));
     };
 
@@ -486,6 +513,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
     return () => {
+      if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('touchstart', onTouchStart);
