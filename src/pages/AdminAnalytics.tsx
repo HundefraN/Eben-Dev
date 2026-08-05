@@ -90,8 +90,10 @@ interface VisitorProfile {
   sessionsMap: Record<string, SessionGroup>;
 }
 
-const ENV_PASSCODE = import.meta.env.VITE_ADMIN_PASSCODE;
-const DEFAULT_PASSCODE = 'eben2026';
+const ADMIN_PASSCODE =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PASSCODE) ||
+  'eben2026';
+
 
 
 export function parseActionDetails(details: any): Record<string, any> {
@@ -857,7 +859,7 @@ export const AdminAnalytics: React.FC = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const input = passcodeInput.trim();
-    const validPasscodes = [ENV_PASSCODE, DEFAULT_PASSCODE, 'admin', 'admin123'].filter(Boolean);
+    const validPasscodes = [ADMIN_PASSCODE, 'eben2026', 'admin', 'admin123'].filter(Boolean);
     if (validPasscodes.includes(input)) {
       setIsAuthenticated(true);
       sessionStorage.setItem('admin_authed', 'true');
