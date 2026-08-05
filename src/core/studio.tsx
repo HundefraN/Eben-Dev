@@ -241,12 +241,12 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const toggleTheme = useCallback(() => setTheme((t) => (t === 'light' ? 'dark' : 'light')), []);
 
-  /* ---- sound (off by default; hover chimes nobody asked for are hostile) ---- */
+  /* ---- sound (on by default; stored pref respected) ---- */
   const [sound, setSound] = useState(() => {
     try {
-      return localStorage.getItem(SOUND_KEY) === 'on';
+      return localStorage.getItem(SOUND_KEY) !== 'off';
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -405,7 +405,11 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const absorbedByScroller = (target: EventTarget | null, deltaY: number) => {
       let node = target as HTMLElement | null;
       while (node && node !== document.body) {
-        if (node.dataset?.scroller !== undefined) {
+        const hasScrollerAttr = node.dataset?.scroller !== undefined;
+        const style = window.getComputedStyle(node);
+        const overflowY = style.overflowY;
+        const isScrollable = hasScrollerAttr || overflowY === 'auto' || overflowY === 'scroll';
+        if (isScrollable) {
           const { scrollTop, scrollHeight, clientHeight } = node;
           const atTop = scrollTop <= 1;
           const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
@@ -430,8 +434,14 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const onKey = (e: KeyboardEvent) => {
       if (navLocked.current) return;
-      const tag = (e.target as HTMLElement)?.tagName;
+      // Skip if modifier keys are held (user is using shortcuts, not navigating stages).
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      // Skip contenteditable or anything inside a <form>, dialog, or modal.
+      if (el?.isContentEditable) return;
+      if (el?.closest?.('form, dialog, [role="dialog"], [data-scroller]')) return;
       const map: Record<string, () => void> = {
         ArrowDown: () => goTo(stageRef.current + 1),
         PageDown: () => goTo(stageRef.current + 1),

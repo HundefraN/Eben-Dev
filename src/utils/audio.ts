@@ -7,6 +7,27 @@ class SoundEffectsEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private lastHover = 0;
+  private unlocked = false;
+
+  constructor() {
+    this.setupGestureListeners();
+  }
+
+  private setupGestureListeners() {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      if (this.ctx && this.ctx.state === 'suspended') {
+        void this.ctx.resume();
+      }
+      this.unlocked = true;
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+    window.addEventListener('pointerdown', unlock, { passive: true });
+    window.addEventListener('keydown', unlock, { passive: true });
+    window.addEventListener('touchstart', unlock, { passive: true });
+  }
 
   private init(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -24,12 +45,14 @@ class SoundEffectsEngine {
       filter.Q.value = 0.6;
 
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.5;
+      this.master.gain.value = 0.6;
 
       this.master.connect(filter);
       filter.connect(this.ctx.destination);
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    if (this.ctx.state === 'suspended') {
+      void this.ctx.resume();
+    }
     return this.ctx;
   }
 
@@ -41,7 +64,7 @@ class SoundEffectsEngine {
       type = 'sine',
       at = 0,
       dur = 0.12,
-      peak = 0.02,
+      peak = 0.15,
     }: { freq: number; to?: number; type?: OscillatorType; at?: number; dur?: number; peak?: number },
   ) {
     const t0 = ctx.currentTime + at;
@@ -63,7 +86,7 @@ class SoundEffectsEngine {
     osc.stop(t0 + dur + 0.02);
   }
 
-  /** Very quiet tick. Rate-limited so sweeping across a grid doesn't machine-gun. */
+  /** Quiet tick. Rate-limited so sweeping across a grid doesn't machine-gun. */
   playHoverSound() {
     const now = performance.now();
     if (now - this.lastHover < 90) return;
@@ -71,7 +94,7 @@ class SoundEffectsEngine {
     try {
       const ctx = this.init();
       if (!ctx) return;
-      this.tone(ctx, { freq: 880, to: 1180, dur: 0.07, peak: 0.008 });
+      this.tone(ctx, { freq: 880, to: 1180, dur: 0.07, peak: 0.12 });
     } catch {
       /* audio is decorative — never let it break the page */
     }
@@ -86,7 +109,7 @@ class SoundEffectsEngine {
         { freq: 587.33, at: 0 },
         { freq: 739.99, at: 0.045 },
         { freq: 987.77, at: 0.09 },
-      ].forEach(({ freq, at }) => this.tone(ctx, { freq, at, dur: 0.4, peak: 0.016 }));
+      ].forEach(({ freq, at }) => this.tone(ctx, { freq, at, dur: 0.4, peak: 0.24 }));
     } catch {
       /* ignore */
     }
@@ -97,8 +120,8 @@ class SoundEffectsEngine {
     try {
       const ctx = this.init();
       if (!ctx) return;
-      this.tone(ctx, { freq: 180, to: 420, type: 'triangle', dur: 0.26, peak: 0.014 });
-      this.tone(ctx, { freq: 90, to: 210, type: 'sine', dur: 0.3, peak: 0.01 });
+      this.tone(ctx, { freq: 180, to: 420, type: 'triangle', dur: 0.26, peak: 0.18 });
+      this.tone(ctx, { freq: 90, to: 210, type: 'sine', dur: 0.3, peak: 0.12 });
     } catch {
       /* ignore */
     }
