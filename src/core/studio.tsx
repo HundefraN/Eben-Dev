@@ -361,6 +361,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     (index: number) => {
       const next = Math.max(0, Math.min(STAGES.length - 1, index));
       lastNav.current = Date.now();
+      // Commit immediately so a second gesture in the same frame steps
+      // from the new stage instead of repeating this one.
+      stageRef.current = next;
       setStage((prev) => {
         if (prev === next) return prev;
         stageSource.set(next);
@@ -401,26 +404,62 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   /* ---- navigation input: wheel, keys, swipe ---- */
   useEffect(() => {
     const COOLDOWN = 750;
-    const IDLE_TIMEOUT = 220;
+    // Silence after the last wheel event. Trackpad inertia keeps events
+    // coming, so the gesture stays "used" until they actually stop.
+    const GESTURE_IDLE_MS = 160;
+    // Accumulated pixels that count as one deliberate page swipe.
+    const COMMIT_PX = 40;
+    // deltaMode line → pixels. One mouse notch must clear COMMIT_PX.
+    const LINE_PX = 40;
 
-    let wheelIdleTimer: ReturnType<typeof setTimeout> | null = null;
-    let gestureActive = false;
-    let lastDirection = 0;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let accum = 0;
+    // True after this gesture has already turned a page. The coasting
+    // tail must not turn another one, and must not eat the next swipe.
+    let consumed = false;
+    let lastEventAt = 0;
+    let navAt = 0;
+    let tail = 0;
 
-    /** True when the pointer sits over a scroller that can still absorb the delta. */
+    const resetGesture = () => {
+      consumed = false;
+      accum = 0;
+      tail = 0;
+    };
+
+    const scheduleIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(resetGesture, GESTURE_IDLE_MS);
+    };
+
+    /** Wheel deltas in CSS pixels. Line/page modes are not 1px each. */
+    const pixelDelta = (e: WheelEvent) => {
+      const scale =
+        e.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? LINE_PX
+          : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? window.innerHeight
+            : 1;
+      return { x: e.deltaX * scale, y: e.deltaY * scale };
+    };
+
+    /**
+     * True when the pointer sits over a scroller that can still move.
+     * Wheel targets are sometimes text nodes; never assume an Element.
+     */
     const absorbedByScroller = (target: EventTarget | null, deltaY: number) => {
-      let node = target as HTMLElement | null;
+      let node: Element | null =
+        target instanceof Element
+          ? target
+          : target instanceof Node
+            ? target.parentElement
+            : null;
       while (node && node !== document.body) {
-        const hasScrollerAttr = node.dataset?.scroller !== undefined;
-        const style = window.getComputedStyle(node);
-        const overflowY = style.overflowY;
-        const isScrollable = hasScrollerAttr || overflowY === 'auto' || overflowY === 'scroll';
-        if (isScrollable) {
-          const { scrollTop, scrollHeight, clientHeight } = node;
-          const atTop = scrollTop <= 1;
-          const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
-          if (scrollHeight > clientHeight + 4 && ((deltaY > 0 && !atBottom) || (deltaY < 0 && !atTop))) {
-            return true;
+        if (node instanceof HTMLElement && node.dataset.scroller !== undefined) {
+          const maxScroll = node.scrollHeight - node.clientHeight;
+          if (maxScroll > 2) {
+            if (deltaY > 0 && node.scrollTop < maxScroll - 1) return true;
+            if (deltaY < 0 && node.scrollTop > 1) return true;
           }
         }
         node = node.parentElement;
@@ -430,33 +469,60 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const onWheel = (e: WheelEvent) => {
       if (navLocked.current) return;
-      if (absorbedByScroller(e.target, e.deltaY)) return;
-      e.preventDefault();
+      // Pinch-zoom reports itself as a wheel event with ctrl held.
+      if (e.ctrlKey) return;
 
-      const now = Date.now();
-      const direction = e.deltaY > 0 ? 1 : -1;
-      const isDirectionChange = lastDirection !== 0 && direction !== lastDirection;
+      const { x, y } = pixelDelta(e);
+      if (y === 0 || Math.abs(x) > Math.abs(y)) return;
 
-      if (isDirectionChange && now - lastNav.current >= 350) {
-        gestureActive = false;
-      }
-
-      if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
-      wheelIdleTimer = setTimeout(() => {
-        gestureActive = false;
-        lastDirection = 0;
-      }, IDLE_TIMEOUT);
-
-      if (Math.abs(e.deltaY) < 10) return;
-
-      if (gestureActive || now - lastNav.current < COOLDOWN) {
+      if (absorbedByScroller(e.target, y)) {
+        // This tick belongs to the panel. Don't let it finish a page swipe.
+        accum = 0;
         return;
       }
+      if (e.cancelable) e.preventDefault();
 
-      gestureActive = true;
-      lastDirection = direction;
-      lastNav.current = now;
-      goTo(stageRef.current + direction);
+      const now = performance.now();
+      const gap = lastEventAt ? now - lastEventAt : Number.POSITIVE_INFINITY;
+      lastEventAt = now;
+      const mag = Math.abs(y);
+
+      if (gap > GESTURE_IDLE_MS) resetGesture();
+
+      if (consumed) {
+        // A new finger swipe after the tail has died down is a step up in
+        // magnitude, not another coasting sample. Accept it as a new gesture.
+        const settled = now - navAt > 220 && tail < 10;
+        const impulse = settled && mag >= 18 && mag > tail * 3;
+        if (!impulse) {
+          tail = tail * 0.72 + mag * 0.28;
+          scheduleIdle();
+          return;
+        }
+        consumed = false;
+        accum = 0;
+      }
+
+      // A real reversal starts over. Sub-pixel wobble against the swipe does not.
+      if (accum !== 0 && Math.sign(accum) !== Math.sign(y)) {
+        if (mag < 4) {
+          scheduleIdle();
+          return;
+        }
+        accum = 0;
+      }
+
+      accum += y;
+      tail = mag;
+      scheduleIdle();
+
+      if (Math.abs(accum) < COMMIT_PX) return;
+
+      consumed = true;
+      accum = 0;
+      navAt = now;
+      tail = mag;
+      goTo(stageRef.current + (y > 0 ? 1 : -1));
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -514,7 +580,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
     return () => {
-      if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
+      if (idleTimer) clearTimeout(idleTimer);
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('touchstart', onTouchStart);
