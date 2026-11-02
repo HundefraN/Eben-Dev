@@ -20,7 +20,7 @@ import { AdminAnalytics } from './pages/AdminAnalytics';
 /* ------------------------------------------------------------------ */
 
 const Studio: React.FC = () => {
-  const { stage, bus, viewport, pointer, goTo } = useStudio();
+  const { stage, bus, pointer, goTo } = useStudio();
   const [servicesOpen, setServicesOpen] = useState(false);
   const firstRun = useRef(true);
 
@@ -28,6 +28,8 @@ const Studio: React.FC = () => {
   useEffect(() => {
     const meta = STAGE_META[stage];
     const delay = firstRun.current ? 1500 : 420;
+    // The old line would otherwise be carried across the screen with her.
+    if (!firstRun.current) bus.hush();
     firstRun.current = false;
     const t = setTimeout(() => bus.say(meta.greeting, { priority: 3, ttl: 5200 }), delay);
     return () => clearTimeout(t);
@@ -87,8 +89,7 @@ const Studio: React.FC = () => {
       </main>
 
       <ConnectorLayer />
-      {/* On phones she only speaks while she's on screen (the home stage). */}
-      {(!viewport.isMobile || stage === 0) && <CompanionBubble />}
+      <CompanionBubble />
 
       <HeaderNav onOpenServices={() => setServicesOpen(true)} />
       <StageRail />

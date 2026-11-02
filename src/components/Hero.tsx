@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import { AnimatePresence, motion, useTransform } from 'motion/react';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import { useCompanionLink, useStudio } from '../core/studio';
+import { phoneHome } from '../core/layout';
 import { COMPANY_INFO, STAGE_META } from '../data/companyData';
-import { soundFx } from '../utils/audio';
 
 /* ------------------------------------------------------------------ */
 
@@ -14,7 +14,6 @@ const PrimaryCta: React.FC<{
   variant?: 'solid' | 'ghost';
   icon?: React.ElementType;
 }> = ({ label, onClick, quip, variant = 'solid', icon: Icon = ArrowRight }) => {
-  const { sound } = useStudio();
   const { ref, linkProps } = useCompanionLink({ weight: 1, quip });
 
   const solid = variant === 'solid';
@@ -23,10 +22,7 @@ const PrimaryCta: React.FC<{
     <motion.button
       ref={ref}
       {...linkProps}
-      onClick={() => {
-        if (sound) soundFx.playClickChime();
-        onClick();
-      }}
+      onClick={onClick}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.975 }}
       transition={{ type: 'spring', stiffness: 460, damping: 26 }}
@@ -63,7 +59,29 @@ const PrimaryCta: React.FC<{
 /* ------------------------------------------------------------------ */
 
 export const Hero: React.FC = () => {
-  const { stage, stageFlow, viewport, goTo, reduceMotion, pointer } = useStudio();
+  const { stage, stageFlow, viewport, goTo, reduceMotion, pointer, heroBottom, setHeroBottom } =
+    useStudio();
+  const copyRef = useRef<HTMLDivElement>(null);
+
+  // On phones she stands in whatever room the copy leaves, so publish where it ends.
+  useLayoutEffect(() => {
+    const el = copyRef.current;
+    if (!el || !viewport.isMobile) return;
+    const measure = () => setHeroBottom(el.getBoundingClientRect().bottom);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [viewport, setHeroBottom]);
+
+  // Phones stack the wordmark and centre it on her upper body, so the letters
+  // frame her on both sides instead of hiding behind her.
+  const phoneMarkY = viewport.isMobile
+    ? (() => {
+        const { baseY, figureH } = phoneHome(viewport, heroBottom);
+        return baseY - figureH * 0.1;
+      })()
+    : null;
 
   // Everything in the hero drifts a little against the pointer for depth.
   const driftX = useTransform(pointer.xr, [-1, 1], reduceMotion ? [0, 0] : [16, -16]);
@@ -88,18 +106,20 @@ export const Hero: React.FC = () => {
 
   return (
     <>
-      {/* ---------- Giant wordmark: the stage she stands in ----------
-          Suppressed on phones, where it would collide with both the headline
-          and the character; the h1 carries the message there instead. */}
+      {/* ---------- Giant wordmark: the stage she stands in ---------- */}
       <motion.div
         className="pointer-events-none fixed inset-0 z-[8] flex select-none items-center justify-center overflow-hidden"
-        style={{
-          opacity: homeOpacity,
-          scale: homeScale,
-          display: viewport.isMobile ? 'none' : 'flex',
-        }}
+        style={{ opacity: homeOpacity, scale: homeScale }}
         aria-hidden="true"
       >
+        <div
+          className="w-full"
+          style={
+            phoneMarkY !== null
+              ? { position: 'absolute', left: 0, top: phoneMarkY, transform: 'translateY(-50%)' }
+              : undefined
+          }
+        >
         <motion.div
           className="flex w-full flex-col items-center"
           style={{ x: markDriftX, y: markDriftY }}
@@ -107,9 +127,9 @@ export const Hero: React.FC = () => {
           <motion.span
             className="font-display block w-full text-center font-extrabold leading-[0.84]"
             style={{
-              fontSize: 'clamp(3.2rem, 15.5vw, 15rem)',
+              fontSize: viewport.isMobile ? 'clamp(5rem, 34vw, 11rem)' : 'clamp(3.2rem, 15.5vw, 15rem)',
               letterSpacing: '-0.045em',
-              marginBottom: viewport.isMobile ? '-0.04em' : '-0.06em',
+              marginBottom: viewport.isMobile ? '-0.02em' : '-0.06em',
               // A ghost, not a headline. At full ink it fights the character for
               // attention and wins, which is the wrong outcome. Flat rather than
               // a clipped gradient: Chrome drops background-clip:text the moment
@@ -124,12 +144,20 @@ export const Hero: React.FC = () => {
                 : { type: 'spring', stiffness: 150, damping: 26, delay: 0.1 }
             }
           >
-            EBEN DEV
+            {viewport.isMobile ? (
+              <>
+                EBEN
+                <br />
+                DEV
+              </>
+            ) : (
+              'EBEN DEV'
+            )}
           </motion.span>
           <motion.span
             className="font-display block w-full text-center font-semibold leading-[0.9]"
             style={{
-              fontSize: 'clamp(1.55rem, 7.1vw, 7rem)',
+              fontSize: viewport.isMobile ? 'clamp(1.55rem, 10.4vw, 4.5rem)' : 'clamp(1.55rem, 7.1vw, 7rem)',
               letterSpacing: '0.2em',
               color: 'transparent',
               // Gold outline, echoing her sneakers, without muddying the ink above.
@@ -147,15 +175,17 @@ export const Hero: React.FC = () => {
             SOLUTIONS
           </motion.span>
         </motion.div>
+        </div>
       </motion.div>
 
       {/* ---------- Home copy + calls to action ---------- */}
       <motion.div
+        ref={copyRef}
         className="pointer-events-none fixed inset-x-0 z-[30]"
         style={{
           opacity: homeOpacity,
           bottom: viewport.isMobile ? 'auto' : '3.5rem',
-          top: viewport.isMobile ? 'calc(env(safe-area-inset-top) + 5.25rem)' : 'auto',
+          top: viewport.isMobile ? 'calc(env(safe-area-inset-top) + 4.75rem)' : 'auto',
         }}
       >
         <div
@@ -176,7 +206,7 @@ export const Hero: React.FC = () => {
               variants={rise}
               initial="hidden"
               animate="show"
-              className="font-display text-[1.45rem] font-semibold leading-[1.15] tracking-[-0.025em] text-fg sm:text-[1.85rem]"
+              className="font-display text-[1.6rem] font-semibold leading-[1.12] tracking-[-0.03em] text-fg sm:text-[1.85rem]"
             >
               {COMPANY_INFO.tagline}
             </motion.h1>
@@ -186,7 +216,8 @@ export const Hero: React.FC = () => {
               variants={rise}
               initial="hidden"
               animate="show"
-              className="max-w-[24rem] text-[13.5px] leading-relaxed text-muted"
+              // Short phones give the line up so she still has room to stand.
+              className="max-w-[24rem] text-[13.5px] leading-relaxed text-muted max-md:[@media(max-height:720px)]:hidden"
             >
               {COMPANY_INFO.subtext}
             </motion.p>

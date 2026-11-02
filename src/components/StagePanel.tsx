@@ -1,51 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useTransform } from 'motion/react';
 import { useCompanionLink, useStudio } from '../core/studio';
-
-import poseIdle from '../assets/images/eben_dev_character_1784789637344.png';
-
-/**
- * On phones there is no room for the full character beside a panel, so her
- * presence is carried by a cropped avatar in the panel header instead. She is
- * still the one introducing the section — just at a size that fits.
- *
- * Always the idle render: the crop is tuned to that artwork's framing, and an
- * avatar that changes identity between sections reads as a different person.
- */
-/** Artwork aspect, and where her face sits inside it, as fractions. */
-const ART_RATIO = 408 / 612;
-const FACE: [number, number] = [0.52, 0.32];
-/** Artwork height as a multiple of the pip — higher means a tighter crop. */
-const ZOOM = 3.1;
-
-export const CompanionPip: React.FC = () => {
-  return (
-    <span
-      className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full"
-      style={{
-        background: 'var(--accent-soft)',
-        border: '1px solid var(--hairline)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-      aria-hidden
-    >
-      <img
-        src={poseIdle}
-        alt=""
-        className="absolute max-w-none select-none"
-        // Scaled and offset so her face lands dead centre in the circle.
-        style={{
-          height: `${ZOOM * 100}%`,
-          width: `${ZOOM * ART_RATIO * 100}%`,
-          left: `${(0.5 - FACE[0] * ZOOM * ART_RATIO) * 100}%`,
-          top: `${(0.5 - FACE[1] * ZOOM) * 100}%`,
-        }}
-      />
-    </span>
-  );
-};
-
-/* ------------------------------------------------------------------ */
+import { phonePanelInsets } from '../core/layout';
+import { STAGE_META } from '../data/companyData';
 
 /** Pixels per second the auto-scroll crawls at. */
 const AUTO_SCROLL_SPEED = 30;
@@ -222,6 +179,10 @@ export const StagePanel: React.FC<StagePanelProps> = ({
 
   if (!mounted) return null;
 
+  // Phones: full bleed, clear of the header, the strip she peeks from, and the
+  // section control. Set from JS so it matches where she actually stands.
+  const phoneInsets = viewport.isMobile ? phonePanelInsets(viewport) : null;
+
   return (
     <motion.section
       aria-labelledby={`panel-${index}-title`}
@@ -238,9 +199,7 @@ export const StagePanel: React.FC<StagePanelProps> = ({
           : { type: 'spring', stiffness: 190, damping: 30, mass: 0.9 }
       }
       className={[
-        'fixed z-30 flex flex-col',
-        // Phones: full bleed, clear of the header and the bottom bar.
-        'inset-x-3 top-[calc(env(safe-area-inset-top)+4.25rem)] bottom-[calc(env(safe-area-inset-bottom)+6rem)]',
+        'fixed z-30 flex flex-col inset-x-3',
         // Desktop: anchored to one side, vertically centred.
         'md:inset-x-auto md:top-24 md:bottom-24',
         side === 'right' ? 'md:right-6 lg:right-14' : 'md:left-6 lg:left-14',
@@ -255,7 +214,10 @@ export const StagePanel: React.FC<StagePanelProps> = ({
       onPointerOver={showScrollControls ? handlePointerEnter : undefined}
       onTouchStart={showScrollControls ? handlePointerEnter : undefined}
       onTouchEnd={showScrollControls ? handlePointerLeave : undefined}
-      style={{ pointerEvents: active ? 'auto' : 'none' }}
+      style={{
+        pointerEvents: active ? 'auto' : 'none',
+        ...(phoneInsets && { top: phoneInsets.top, bottom: phoneInsets.bottom }),
+      }}
     >
       <motion.div
         ref={linkRef}
@@ -265,7 +227,7 @@ export const StagePanel: React.FC<StagePanelProps> = ({
         onPointerEnter={showScrollControls ? handlePointerEnter : undefined}
         onPointerLeave={showScrollControls ? handlePointerLeave : undefined}
         onPointerOver={showScrollControls ? handlePointerEnter : undefined}
-        className="surface-raised edge-light relative flex max-h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)]"
+        className="surface-raised panel-shell edge-light relative flex max-h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)]"
         style={{
           rotateX: viewport.isMobile ? 0 : tiltX,
           rotateY: viewport.isMobile ? 0 : tiltY,
@@ -274,9 +236,17 @@ export const StagePanel: React.FC<StagePanelProps> = ({
       >
         {/* Header */}
         <header className="flex items-start gap-3 px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
-          {viewport.isMobile && <CompanionPip />}
           <div className="min-w-0 flex-1">
-            <span className="eyebrow">{eyebrow}</span>
+            <span className="eyebrow flex items-center gap-2">
+              {/* Desktop shows the section index under the panel; phones have no room there. */}
+              {viewport.isCompact && (
+                <span className="font-display text-[11px] font-bold tabular-nums" style={{ color: 'var(--accent)', letterSpacing: 0 }}>
+                  {String(index).padStart(2, '0')}
+                  <span style={{ color: 'var(--fg-subtle)' }}>/{String(STAGE_META.length - 1).padStart(2, '0')}</span>
+                </span>
+              )}
+              {eyebrow}
+            </span>
             <h2
               id={`panel-${index}-title`}
               className="font-display mt-1 text-[1.35rem] font-bold leading-[1.1] tracking-[-0.03em] text-fg sm:text-[1.6rem]"

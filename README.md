@@ -129,7 +129,6 @@ The app is built around a **Studio context** (`StudioProvider`) that holds globa
 | **Stage navigation** | 4 named stages (`home → work → founder → contact`) driven by scroll and nav clicks |
 | **Companion bus** | Priority queue for Ebbi's speech lines, with TTL and idle nudges |
 | **Theme system** | Light/dark toggle, persisted to `localStorage`, resolved before first paint |
-| **Sound FX** | Toggleable UI chimes and hover audio |
 | **Viewport** | Mobile/desktop breakpoint reactivity |
 | **Pointer tracking** | Used for connector threads that follow Ebbi's hand |
 
@@ -243,7 +242,8 @@ eben-dev/
 │   ├── data/
 │   │   └── companyData.ts      # All content — copy, stats, projects, services
 │   ├── utils/
-│   │   └── audio.ts            # Sound FX utilities
+│   │   ├── analytics.ts        # Event tracking
+│   │   └── media.ts            # Media URL helpers
 │   ├── App.tsx                 # Root — IntroCurtain + Studio layout
 │   ├── main.tsx                # Entry point
 │   └── index.css               # Design system tokens + global styles

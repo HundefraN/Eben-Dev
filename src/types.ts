@@ -6,7 +6,6 @@ export interface ParallaxConfig {
   enableParticles: boolean;
   enableFloatingBadges: boolean;
   enableLightFollow: boolean;
-  soundEnabled: boolean;
 }
 
 export interface ServiceItem {

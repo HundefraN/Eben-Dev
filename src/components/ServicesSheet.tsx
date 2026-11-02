@@ -4,7 +4,6 @@ import { ArrowRight, Cloud, Layers, Orbit, Smartphone, Sparkles, X } from 'lucid
 import { useCompanionLink, useStudio } from '../core/studio';
 import { SERVICES_LIST } from '../data/companyData';
 import type { ServiceItem } from '../core/types';
-import { soundFx } from '../utils/audio';
 
 const ICONS: Record<string, React.ElementType> = { Layers, Sparkles, Orbit, Smartphone, Cloud };
 
@@ -15,7 +14,6 @@ interface ServicesSheetProps {
 }
 
 const ServiceCard: React.FC<{ service: ServiceItem; index: number }> = ({ service, index }) => {
-  const { sound } = useStudio();
   const { ref, linkProps } = useCompanionLink({ weight: 1, quip: service.quip });
   const Icon = ICONS[service.iconName] ?? Layers;
 
@@ -23,10 +21,6 @@ const ServiceCard: React.FC<{ service: ServiceItem; index: number }> = ({ servic
     <motion.article
       ref={ref}
       {...linkProps}
-      onMouseEnter={() => {
-        linkProps.onMouseEnter();
-        if (sound) soundFx.playHoverSound();
-      }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 280, damping: 30, delay: 0.08 + index * 0.06 }}
@@ -76,7 +70,7 @@ const ServiceCard: React.FC<{ service: ServiceItem; index: number }> = ({ servic
 };
 
 export const ServicesSheet: React.FC<ServicesSheetProps> = ({ open, onClose, onEnquire }) => {
-  const { setNavLocked, bus, viewport, sound, setOverlay } = useStudio();
+  const { setNavLocked, bus, viewport, setOverlay } = useStudio();
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -190,7 +184,6 @@ export const ServicesSheet: React.FC<ServicesSheetProps> = ({ open, onClose, onE
               <motion.button
                 type="button"
                 onClick={() => {
-                  if (sound) soundFx.playClickChime();
                   onClose();
                   onEnquire();
                 }}

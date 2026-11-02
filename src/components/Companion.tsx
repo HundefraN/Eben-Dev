@@ -7,7 +7,9 @@ import {
   useTransform,
 } from 'motion/react';
 import { useStudio } from '../core/studio';
+import { ART_RATIO, phoneHome, phonePeek, phonePeekSide } from '../core/layout';
 import type { CompanionReaction } from '../core/types';
+import { STAGE_META } from '../data/companyData';
 
 import poseIdle from '../assets/images/eben_dev_character_1784789637344.png';
 import posePointRight from '../assets/images/cs_pointing to the right.png';
@@ -63,7 +65,6 @@ const POSES: PoseSpec[] = [
   },
 ];
 
-const ART_RATIO = 408 / 612;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Expanding ring emitted from her hand when she gestures. */
@@ -84,7 +85,7 @@ const PulseRing: React.FC<{ id: number; x: number; y: number }> = ({ x, y }) => 
 );
 
 export const Companion: React.FC = () => {
-  const { pointer, anchors, stage, stageFlow, viewport, reduceMotion, bus, gaze, overlay } =
+  const { pointer, anchors, stage, stageFlow, viewport, reduceMotion, bus, gaze, overlay, heroBottom } =
     useStudio();
   const [rings, setRings] = useState<{ id: number; x: number; y: number }[]>([]);
   const ringSeq = useRef(0);
@@ -95,36 +96,36 @@ export const Companion: React.FC = () => {
 
   /* ---- sizing ---------------------------------------------------- */
   const { figureH, figureW, baseY } = useMemo(() => {
-    const { width, height, isMobile, isCompact } = viewport;
-    const h = isMobile
-      ? Math.min(height * 0.47, 400)
-      : isCompact
-        ? Math.min(height * 0.6, 520)
-        : Math.min(height * 0.82, 780);
-    return {
-      figureH: h,
-      figureW: h * ART_RATIO,
-      // Lower on phones so the headline above her has clear air.
-      baseY: isMobile ? height * 0.62 : height * 0.55,
-    };
-  }, [viewport]);
+    const { height, isMobile, isCompact } = viewport;
+    if (isMobile) {
+      const home = phoneHome(viewport, heroBottom);
+      return { figureH: home.figureH, figureW: home.figureH * ART_RATIO, baseY: home.baseY };
+    }
+    const h = isCompact ? Math.min(height * 0.6, 520) : Math.min(height * 0.82, 780);
+    return { figureH: h, figureW: h * ART_RATIO, baseY: height * 0.55 };
+  }, [viewport, heroBottom]);
 
   /* ---- stage choreography ---------------------------------------- */
   // Home centred; then she steps aside so the panel has room, and gestures at it.
-  const shift = viewport.isMobile
-    ? 0
-    : viewport.isCompact
-      ? viewport.width * 0.24
-      : Math.min(viewport.width * 0.21, 330);
-  const stageX = useTransform(stageFlow, [0, 1, 2, 3], [0, -shift, shift, -shift * 0.72]);
+  // A full-bleed panel on a phone leaves no room beside her, so there she
+  // ducks behind it instead and looks over its top edge from one corner.
+  const peek = useMemo(
+    () => ({ left: phonePeek(viewport, -1), right: phonePeek(viewport, 1) }),
+    [viewport],
+  );
+  const shift = viewport.isCompact
+    ? viewport.width * 0.24
+    : Math.min(viewport.width * 0.21, 330);
+  const stageXs = viewport.isMobile
+    ? STAGE_META.map((meta, i) =>
+        i === 0 ? 0 : (phonePeekSide(meta) === 1 ? peek.right : peek.left).cx - viewport.width / 2,
+      )
+    : [0, -shift, shift, -shift * 0.72];
+  const stageX = useTransform(stageFlow, [0, 1, 2, 3], stageXs);
 
-  // On phones a full-bleed panel leaves no room beside her, so she hands over
-  // to the avatar in the panel header (see CompanionPip) and steps back.
   const dock = useTransform(stageFlow, (s) => (viewport.isMobile ? Math.min(1, Math.max(0, s)) : 0));
-  const dockX = useTransform(dock, (d) => lerp(0, -viewport.width * 0.12, d));
-  const dockY = useTransform(dock, (d) => lerp(0, viewport.height * 0.12, d));
-  const dockScale = useTransform(dock, (d) => lerp(1, 0.7, d));
-  const dockOpacity = useTransform(dock, [0, 0.7], [1, 0]);
+  const dockY = useTransform(dock, (d) => lerp(0, peek.left.cy - baseY, d));
+  const dockScale = useTransform(dock, (d) => lerp(1, peek.left.figureH / figureH, d));
 
   /* ---- lean: toward the gazed element, else toward the pointer ---- */
   const leanXRaw = useMotionValue(0);
@@ -150,8 +151,8 @@ export const Companion: React.FC = () => {
   }, [overlay, viewport.isMobile, viewport.width, asideRaw]);
 
   const totalX = useTransform<number, number>(
-    [stageX, dockX, driftX, aside],
-    ([a, b, c, d]) => a + b + c + d,
+    [stageX, driftX, aside],
+    ([a, b, c]) => a + b + c,
   );
   const totalY = useTransform<number, number>([dockY, driftY], ([a, b]) => a + b);
 
@@ -173,6 +174,7 @@ export const Companion: React.FC = () => {
       const top = cy - h / 2;
 
       const a = anchors.current;
+      a.crown = { x: cx, y: top };
       a.head = { x: left + pose.head[0] * w, y: top + pose.head[1] * h };
       a.hand = { x: left + pose.hand[0] * w, y: top + pose.hand[1] * h };
       a.core = { x: left + pose.core[0] * w, y: top + pose.core[1] * h };
@@ -259,7 +261,6 @@ export const Companion: React.FC = () => {
           x: totalX,
           y: totalY,
           scale: dockScale,
-          opacity: dockOpacity,
           translateX: '-50%',
           translateY: '-50%',
           perspective: 1400,

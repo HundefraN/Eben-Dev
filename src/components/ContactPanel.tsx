@@ -6,7 +6,6 @@ import {
 import { useCompanionLink, useStudio } from '../core/studio';
 import { FOUNDER_INFO } from '../data/companyData';
 import { StagePanel } from './StagePanel';
-import { soundFx } from '../utils/audio';
 
 export interface CurrencyOption {
   code: string;
@@ -134,7 +133,6 @@ const DirectLine: React.FC<{
   quip: string;
   className?: string;
 }> = ({ icon: Icon, label, value, href, external, quip, className = '' }) => {
-  const { sound } = useStudio();
   const { ref, linkProps } = useCompanionLink({ weight: 0.9, quip });
   const [copied, setCopied] = useState(false);
 
@@ -142,7 +140,6 @@ const DirectLine: React.FC<{
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
-      if (sound) soundFx.playHoverSound();
       setTimeout(() => setCopied(false), 1800);
     } catch {
     }
@@ -179,7 +176,7 @@ const DirectLine: React.FC<{
         type="button"
         onClick={copy}
         aria-label={`Copy ${label.toLowerCase()}`}
-        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-subtle opacity-0 transition-all duration-200 hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-subtle opacity-0 transition-all duration-200 hover:text-fg focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
         style={{ background: 'color-mix(in srgb, var(--fg) 6%, transparent)' }}
       >
         <AnimatePresence mode="wait" initial={false}>
@@ -199,7 +196,7 @@ const DirectLine: React.FC<{
 };
 
 export const ContactPanel: React.FC = () => {
-  const { sound, bus } = useStudio();
+  const { bus } = useStudio();
   const submit = useCompanionLink({ weight: 1, quip: 'Send it over — we reply within two hours.' });
 
   const [form, setForm] = useState({
@@ -262,8 +259,6 @@ export const ContactPanel: React.FC = () => {
     e.preventDefault();
     setSending(true);
     setErrorMsg(null);
-
-    if (sound) soundFx.playClickChime();
 
     const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY;
 
@@ -337,9 +332,8 @@ export const ContactPanel: React.FC = () => {
       title="Tell us what you're building"
       intro="Share the shape of the problem and you'll hear back from Hundefra directly, usually within two hours."
     >
-      <div className="grid grid-cols-2 gap-2 @md:grid-cols-[1fr_1.45fr_1fr]">
+      <div className="grid grid-cols-1 gap-2 @md:grid-cols-[1fr_1.45fr_1fr]">
         <DirectLine
-          className="col-span-1"
           icon={Phone}
           label="Phone"
           value={FOUNDER_INFO.phone}
@@ -347,7 +341,6 @@ export const ContactPanel: React.FC = () => {
           quip="Call if it is urgent."
         />
         <DirectLine
-          className="col-span-1"
           icon={Mail}
           label="Email"
           value={FOUNDER_INFO.email}
@@ -355,7 +348,6 @@ export const ContactPanel: React.FC = () => {
           quip="Email works best for detailed briefs."
         />
         <DirectLine
-          className="col-span-2 @md:col-span-1"
           icon={Send}
           label="Telegram"
           value={FOUNDER_INFO.telegram}

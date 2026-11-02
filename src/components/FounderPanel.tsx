@@ -4,7 +4,6 @@ import { ArrowRight, Mail, MapPin, Phone, Send } from 'lucide-react';
 import { useCompanionLink, useStudio } from '../core/studio';
 import { FOUNDER_INFO } from '../data/companyData';
 import { StagePanel } from './StagePanel';
-import { soundFx } from '../utils/audio';
 
 const founderPhoto = 'https://res.cloudinary.com/dqosuzul4/image/upload/v1785918975/CEO_l5atvz.jpg';
 
@@ -57,7 +56,6 @@ const ContactLink: React.FC<{
   external?: boolean;
   quip: string;
 }> = ({ href, icon: Icon, label, value, external, quip }) => {
-  const { sound } = useStudio();
   const { ref, linkProps } = useCompanionLink({ weight: 0.9, quip });
 
   return (
@@ -67,10 +65,6 @@ const ContactLink: React.FC<{
       href={href}
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
-      onMouseEnter={() => {
-        linkProps.onMouseEnter();
-        if (sound) soundFx.playHoverSound();
-      }}
       whileHover={{ y: -2 }}
       transition={{ type: 'spring', stiffness: 420, damping: 26 }}
       className="group flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 transition-colors"
@@ -96,7 +90,7 @@ const ContactLink: React.FC<{
 };
 
 export const FounderPanel: React.FC = () => {
-  const { goTo, sound } = useStudio();
+  const { goTo } = useStudio();
   const cta = useCompanionLink({ weight: 1, quip: 'Go on — he reads every one of these.' });
 
   return (
@@ -215,10 +209,7 @@ export const FounderPanel: React.FC = () => {
         ref={cta.ref}
         {...cta.linkProps}
         type="button"
-        onClick={() => {
-          if (sound) soundFx.playClickChime();
-          goTo(3);
-        }}
+        onClick={() => goTo(3)}
         whileHover={{ y: -2 }}
         whileTap={{ scale: 0.98 }}
         transition={{ type: 'spring', stiffness: 440, damping: 26 }}

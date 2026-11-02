@@ -292,6 +292,14 @@ button {
   background: color-mix(in srgb, var(--bg) 88%, white 6%);
 }
 
+/* On phones she stands directly behind the stage panels; frosted glass alone
+   lets her silhouette ghost through the copy. */
+@media (max-width: 767px) {
+  .panel-shell {
+    background: color-mix(in srgb, var(--bg-solid) 93%, transparent);
+  }
+}
+
 /* Gradient hairline that catches the light along the top edge. */
 .edge-light {
   position: relative;

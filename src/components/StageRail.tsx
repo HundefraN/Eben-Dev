@@ -3,11 +3,10 @@ import { motion, useTransform } from 'motion/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useStudio } from '../core/studio';
 import { STAGE_META } from '../data/companyData';
-import { soundFx } from '../utils/audio';
 
 /** Vertical progress rail — desktop only. Doubles as the section index. */
 export const StageRail: React.FC = () => {
-  const { stage, goTo, stageFlow, viewport, sound } = useStudio();
+  const { stage, goTo, stageFlow, viewport } = useStudio();
   const progress = useTransform(stageFlow, [0, STAGE_META.length - 1], ['0%', '100%']);
 
   if (viewport.isCompact) return null;
@@ -36,10 +35,7 @@ export const StageRail: React.FC = () => {
             <button
               key={meta.id}
               type="button"
-              onClick={() => {
-                if (sound) soundFx.playHoverSound();
-                goTo(i);
-              }}
+              onClick={() => goTo(i)}
               aria-current={active ? 'true' : undefined}
               className="group relative flex items-center justify-end py-1.5 pl-8"
             >
@@ -79,65 +75,73 @@ export const StageRail: React.FC = () => {
 
 /** Bottom control: advances the story, and states plainly where it goes next. */
 export const StageAdvance: React.FC = () => {
-  const { stage, goTo, viewport, sound } = useStudio();
+  const { stage, goTo, viewport } = useStudio();
   const isLast = stage === STAGE_META.length - 1;
   const nextIndex = isLast ? 0 : stage + 1;
   const next = STAGE_META[nextIndex];
 
-  return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[max(0.9rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-center gap-2.5">
-      {viewport.isCompact && (
-        <div className="pointer-events-auto flex items-center gap-1.5" role="tablist" aria-label="Sections">
-          {STAGE_META.map((meta, i) => (
-            <button
-              key={meta.id}
-              type="button"
-              role="tab"
-              aria-selected={stage === i}
-              aria-label={meta.label}
-              onClick={() => goTo(i)}
-              className="p-1.5"
-            >
-              <motion.span
-                className="block rounded-full"
-                animate={{
-                  width: stage === i ? 20 : 5,
-                  height: 5,
-                  backgroundColor: stage === i ? 'var(--accent)' : 'var(--fg-subtle)',
-                }}
-                transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-              />
-            </button>
-          ))}
-        </div>
-      )}
-
-      <motion.button
-        type="button"
-        onClick={() => {
-          if (sound) soundFx.playHoverSound();
-          goTo(nextIndex);
-        }}
-        whileHover={{ y: -2 }}
-        whileTap={{ scale: 0.97 }}
-        transition={{ type: 'spring', stiffness: 460, damping: 26 }}
-        className="surface pointer-events-auto group flex max-w-[92vw] items-center gap-2.5 rounded-full py-2 pl-4 pr-2.5"
+  const advance = (
+    <motion.button
+      type="button"
+      onClick={() => goTo(nextIndex)}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: 'spring', stiffness: 460, damping: 26 }}
+      className={`pointer-events-auto group flex min-w-0 items-center gap-2.5 rounded-full ${
+        viewport.isCompact ? 'py-1.5 pl-2 pr-1.5' : 'surface max-w-[92vw] py-2 pl-4 pr-2.5'
+      }`}
+    >
+      <span className="eyebrow" style={{ fontSize: 9 }}>
+        {isLast ? 'Back to' : 'Next'}
+      </span>
+      <span className="truncate text-[12.5px] font-semibold text-fg">{next.label}</span>
+      <span
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-full transition-transform duration-300 group-hover:translate-y-0.5"
+        style={{ background: 'var(--accent-soft)' }}
       >
-        <span className="eyebrow" style={{ fontSize: 9 }}>
-          {isLast ? 'Back to' : 'Next'}
-        </span>
-        <span className="truncate text-[12.5px] font-semibold text-fg">{next.label}</span>
-        <span
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full transition-transform duration-300 group-hover:translate-y-0.5"
-          style={{ background: 'var(--accent-soft)' }}
-        >
-          {isLast ? (
-            <ArrowUp className="h-3.5 w-3.5" style={{ color: 'var(--accent-strong)' }} />
-          ) : (
-            <ArrowDown className="h-3.5 w-3.5" style={{ color: 'var(--accent-strong)' }} />
-          )}
-        </span>
-      </motion.button>
+        {isLast ? (
+          <ArrowUp className="h-3.5 w-3.5" style={{ color: 'var(--accent-strong)' }} />
+        ) : (
+          <ArrowDown className="h-3.5 w-3.5" style={{ color: 'var(--accent-strong)' }} />
+        )}
+      </span>
+    </motion.button>
+  );
+
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-[max(0.9rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-center">
+      {viewport.isCompact ? (
+        // One control rather than two stacked rows: where you are, and where next goes.
+        <div className="surface pointer-events-auto flex max-w-[92vw] items-center rounded-full p-1 pl-2">
+          <div className="flex items-center" role="tablist" aria-label="Sections">
+            {STAGE_META.map((meta, i) => (
+              <button
+                key={meta.id}
+                type="button"
+                role="tab"
+                aria-selected={stage === i}
+                aria-label={meta.label}
+                onClick={() => goTo(i)}
+                className="px-1 py-2.5"
+              >
+                <motion.span
+                  className="block rounded-full"
+                  animate={{
+                    width: stage === i ? 18 : 5,
+                    height: 5,
+                    backgroundColor: stage === i ? 'var(--accent)' : 'var(--fg-subtle)',
+                  }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                />
+              </button>
+            ))}
+          </div>
+          <span className="mx-1.5 h-5 w-px shrink-0" style={{ background: 'var(--hairline-strong)' }} aria-hidden />
+          {advance}
+        </div>
+      ) : (
+        advance
+      )}
     </div>
   );
 };

@@ -7,7 +7,6 @@ import type { ProjectHighlight } from '../core/types';
 import { StagePanel } from './StagePanel';
 import { ProofPlate, ProofViewer } from './ProofViewer';
 import { resolveMedia } from '../utils/media';
-import { soundFx } from '../utils/audio';
 
 /* ------------------------------------------------------------------ */
 
@@ -179,17 +178,12 @@ const ProjectCard: React.FC<{
   onEnquire: () => void;
   onOpenProof: () => void;
 }> = ({ project, index, onEnquire, onOpenProof }) => {
-  const { sound } = useStudio();
   const { ref, linkProps } = useCompanionLink({ weight: 1, quip: project.quip });
 
   return (
     <motion.article
       ref={ref}
       {...linkProps}
-      onMouseEnter={() => {
-        linkProps.onMouseEnter();
-        if (sound) soundFx.playHoverSound();
-      }}
       initial={{ opacity: 0, y: 22 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 30, delay: 0.08 + index * 0.08 }}

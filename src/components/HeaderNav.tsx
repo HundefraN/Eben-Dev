@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Menu, Moon, Send, Sun, Volume2, VolumeX, X } from 'lucide-react';
+import { Menu, Moon, Send, Sun, X } from 'lucide-react';
 import { useCompanionLink, useStudio } from '../core/studio';
 import { COMPANY_INFO } from '../data/companyData';
-import { soundFx } from '../utils/audio';
 
 import logoImg from '../assets/images/logo.png';
 
@@ -45,8 +44,7 @@ const IconToggle: React.FC<{
 /* ------------------------------------------------------------------ */
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({ onOpenServices }) => {
-  const { stage, goTo, theme, toggleTheme, sound, toggleSound, viewport, setNavLocked } =
-    useStudio();
+  const { stage, goTo, theme, toggleTheme, viewport, setNavLocked } = useStudio();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const contact = useCompanionLink({ weight: 1, quip: 'Straight to the point — I like it.' });
@@ -70,7 +68,6 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ onOpenServices }) => {
   }, [menuOpen]);
 
   const click = (fn: () => void) => () => {
-    if (sound) soundFx.playClickChime();
     fn();
     setMenuOpen(false);
   };
@@ -99,7 +96,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ onOpenServices }) => {
               <img src={logoImg} alt="" className="h-full w-full object-cover" />
             </span>
             {/* Hidden on tablet, where the nav needs the horizontal room. */}
-            <span className="hidden leading-tight min-[420px]:max-md:block lg:block">
+            <span className="hidden leading-tight max-md:block lg:block">
               <span className="font-display block whitespace-nowrap text-[14px] font-bold tracking-[-0.02em] text-fg">
                 {COMPANY_INFO.name}
               </span>
@@ -127,7 +124,6 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ onOpenServices }) => {
                     onClick={click(() =>
                       item.stage !== undefined ? goTo(item.stage) : item.action?.(),
                     )}
-                    onMouseEnter={() => sound && soundFx.playHoverSound()}
                     aria-current={isActive ? 'page' : undefined}
                     className="relative rounded-full px-4 py-2 text-[13px] font-medium transition-colors duration-200"
                     style={{ color: isActive ? 'var(--fg)' : 'var(--fg-muted)' }}
@@ -175,12 +171,6 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ onOpenServices }) => {
               </motion.button>
             )}
 
-            <IconToggle
-              label={sound ? 'Mute interface sounds' : 'Enable interface sounds'}
-              onClick={toggleSound}
-            >
-              {sound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            </IconToggle>
             <IconToggle
               label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
               onClick={toggleTheme}

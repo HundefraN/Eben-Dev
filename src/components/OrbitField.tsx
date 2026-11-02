@@ -4,7 +4,6 @@ import { Cloud, Gauge, Orbit, ShieldCheck, Sparkles } from 'lucide-react';
 import { useCompanionLink, useStudio } from '../core/studio';
 import { CAPABILITY_CHIPS } from '../data/companyData';
 import type { CapabilityChip } from '../core/types';
-import { soundFx } from '../utils/audio';
 
 const ICONS: Record<string, React.ElementType> = { Gauge, Sparkles, Orbit, Cloud, ShieldCheck };
 
@@ -29,13 +28,12 @@ interface ChipProps {
 }
 
 const OrbitChip: React.FC<ChipProps> = ({ chip, index, onHoverChange, registerNode }) => {
-  const { sound, viewport, bus } = useStudio();
+  const { viewport, bus } = useStudio();
   const { ref, linkProps } = useCompanionLink({ weight: 1, quip: chip.quip });
   const [open, setOpen] = useState(false);
   const Icon = ICONS[chip.iconName] ?? Sparkles;
 
   const activate = () => {
-    if (sound) soundFx.playHoverSound();
     onHoverChange(index, true);
     setOpen(true);
   };
@@ -133,10 +131,10 @@ export const OrbitField: React.FC = () => {
     rippleAt.current = performance.now();
   }), [bus]);
 
-  // Phones get two chips parked beside her hips — a moving orbit is too busy
-  // at that size and would collide with the hero copy above.
+  // Phones get two chips parked beside her waist — a moving orbit is too busy
+  // at that size — held just above the wordmark's outline row.
   const chips = viewport.isMobile ? CAPABILITY_CHIPS.slice(0, 2) : CAPABILITY_CHIPS;
-  const staticAngles = [166, 14];
+  const staticAngles = [196, -16];
 
   useEffect(() => {
     let raf = 0;

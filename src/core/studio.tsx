@@ -19,12 +19,28 @@ import type {
   Viewport,
 } from './types';
 import { STAGES } from './types';
-import { soundFx } from '../utils/audio';
 import { trackEvent } from '../utils/analytics';
 
 /* ------------------------------------------------------------------ */
 /* Viewport                                                            */
 /* ------------------------------------------------------------------ */
+
+let safeAreaProbe: HTMLDivElement | null = null;
+
+/** env() can't be read from JS directly, so a hidden element resolves it for us. */
+function readSafeArea() {
+  if (!document.body) return { top: 0, bottom: 0 };
+  if (!safeAreaProbe) {
+    safeAreaProbe = document.createElement('div');
+    safeAreaProbe.setAttribute('aria-hidden', 'true');
+    safeAreaProbe.style.cssText =
+      'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+      'padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';
+    document.body.appendChild(safeAreaProbe);
+  }
+  const style = getComputedStyle(safeAreaProbe);
+  return { top: parseFloat(style.paddingTop) || 0, bottom: parseFloat(style.paddingBottom) || 0 };
+}
 
 function readViewport(): Viewport {
   if (typeof window === 'undefined') {
@@ -35,10 +51,13 @@ function readViewport(): Viewport {
       isCompact: false,
       isTouch: false,
       isPortrait: false,
+      safeTop: 0,
+      safeBottom: 0,
     };
   }
   const width = window.innerWidth;
   const height = window.innerHeight;
+  const safe = readSafeArea();
   return {
     width,
     height,
@@ -46,6 +65,8 @@ function readViewport(): Viewport {
     isCompact: width < 1120,
     isTouch: window.matchMedia('(hover: none)').matches,
     isPortrait: height > width,
+    safeTop: safe.top,
+    safeBottom: safe.bottom,
   };
 }
 
@@ -161,14 +182,12 @@ interface StudioValue {
   stageFlow: MotionValue<number>;
   stage: number;
   stageId: StageId;
-  goTo: (index: number, opts?: { silent?: boolean }) => void;
+  goTo: (index: number) => void;
   step: (delta: number) => void;
   viewport: Viewport;
   reduceMotion: boolean;
   theme: ThemeMode;
   toggleTheme: () => void;
-  sound: boolean;
-  toggleSound: () => void;
   anchors: React.MutableRefObject<AnchorMap>;
   links: LinkRegistry;
   bus: CompanionBus;
@@ -180,6 +199,9 @@ interface StudioValue {
   /** Which side a full-screen overlay occupies, so she can step out of its way. */
   overlay: 'none' | 'left' | 'right';
   setOverlay: (side: 'none' | 'left' | 'right') => void;
+  /** Bottom edge of the home copy; on phones she stands in the space beneath it. */
+  heroBottom: number;
+  setHeroBottom: (px: number) => void;
 }
 
 const StudioContext = createContext<StudioValue | null>(null);
@@ -195,7 +217,6 @@ export function useStudio(): StudioValue {
 /* ------------------------------------------------------------------ */
 
 const THEME_KEY = 'eben-theme';
-const SOUND_KEY = 'eben-sound';
 
 export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const prefersReduced = useReducedMotion();
@@ -240,31 +261,6 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [theme]);
 
   const toggleTheme = useCallback(() => setTheme((t) => (t === 'light' ? 'dark' : 'light')), []);
-
-  /* ---- sound (on by default; stored pref respected) ---- */
-  const [sound, setSound] = useState(() => {
-    try {
-      return localStorage.getItem(SOUND_KEY) !== 'off';
-    } catch {
-      return true;
-    }
-  });
-
-  const toggleSound = useCallback(() => {
-    setSound((s) => {
-      const next = !s;
-      try {
-        localStorage.setItem(SOUND_KEY, next ? 'on' : 'off');
-      } catch {
-        /* ignore */
-      }
-      if (next) soundFx.playClickChime();
-      return next;
-    });
-  }, []);
-
-  const soundRef = useRef(sound);
-  soundRef.current = sound;
 
   /* ---- pointer ---- */
   const rawPointer = useRef({ x: 0, y: 0, xr: 0, yr: 0, active: false });
@@ -353,6 +349,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const lastNav = useRef(0);
 
   const anchors = useRef<AnchorMap>({
+    crown: { x: 0, y: 0 },
     head: { x: 0, y: 0 },
     hand: { x: 0, y: 0 },
     core: { x: 0, y: 0 },
@@ -361,13 +358,12 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const goTo = useCallback(
-    (index: number, opts?: { silent?: boolean }) => {
+    (index: number) => {
       const next = Math.max(0, Math.min(STAGES.length - 1, index));
       lastNav.current = Date.now();
       setStage((prev) => {
         if (prev === next) return prev;
         stageSource.set(next);
-        if (!opts?.silent && soundRef.current) soundFx.playParallaxSwoosh();
         bus.react(
           next === 1 ? { kind: 'point', side: 'right' }
             : next === 2 ? { kind: 'point', side: 'left' }
@@ -396,6 +392,11 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const [overlay, setOverlay] = useState<'none' | 'left' | 'right'>('none');
+  const [heroBottom, setHeroBottomRaw] = useState(0);
+  const setHeroBottom = useCallback(
+    (px: number) => setHeroBottomRaw((prev) => (Math.abs(prev - px) < 1 ? prev : px)),
+    [],
+  );
 
   /* ---- navigation input: wheel, keys, swipe ---- */
   useEffect(() => {
@@ -533,8 +534,6 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       reduceMotion,
       theme,
       toggleTheme,
-      sound,
-      toggleSound,
       anchors,
       links,
       bus,
@@ -544,10 +543,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setNavLocked,
       overlay,
       setOverlay,
+      heroBottom,
+      setHeroBottom,
     }),
     [
       pointer, stageFlow, stage, goTo, step, viewport, reduceMotion,
-      theme, toggleTheme, sound, toggleSound, links, bus, setGaze, setNavLocked, overlay,
+      theme, toggleTheme, links, bus, setGaze, setNavLocked, overlay,
+      heroBottom, setHeroBottom,
     ],
   );
 

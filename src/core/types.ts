@@ -24,6 +24,9 @@ export interface Viewport {
   isCompact: boolean;
   isTouch: boolean;
   isPortrait: boolean;
+  /** Resolved env(safe-area-inset-*) in px, for layers positioned from JS. */
+  safeTop: number;
+  safeBottom: number;
 }
 
 /** A point in viewport space, published every frame by the companion. */
@@ -33,6 +36,8 @@ export interface AnchorPoint {
 }
 
 export interface AnchorMap {
+  /** Top edge of the artwork box, centred. */
+  crown: AnchorPoint;
   /** Just above the character's head — where speech attaches. */
   head: AnchorPoint;
   /** The gesturing hand for the current pose — where light threads originate. */
